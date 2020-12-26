@@ -1,0 +1,143 @@
+html, body {
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  height:100%;
+  width:100%;
+  margin:0;
+  padding:0;
+  border:0;
+}
+body {
+  font-size:14px;
+  width: 100%;
+}
+#cnt {
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  height:100%;
+  width: 100%;
+  margin:0;
+  padding:2px;
+}
+tr.ui-state-active th,
+#cnt tbody th {
+  white-space:nowrap;
+}
+@media print {
+  html,body {
+    width: 210mm;
+    padding:2px;
+  }
+  #cnt {
+    width: 210mm;
+  }
+}
+#id_list .ui-dialog table,
+#cnt table {
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  width: 100%;
+  border-collapse: collapse;
+  cursor: pointer;
+  margin: 2px;
+}
+#id_list .ui-dialog table td {
+  padding: 4px;
+  border: 1px solid silver;
+}
+#id_list .ui-dialog textarea {
+  text-decoration:none;
+  border:0;
+  width:100%;
+  height:5em;
+}
+table.finale td, table.finale th,
+table.all td, table.all th {
+  padding: 2px;
+  border: 1px solid silver;
+}
+table.team td, table.team th {
+  padding: 2px;
+  border: 1px solid silver;
+}
+table.tablesorter td, table.tablesorter th {
+  padding: 2px;
+  border: 1px solid silver;
+}
+table.team th:nth-child(2) {
+  width:90%;
+}
+table.tablesorter tbody tr:nth-child(odd) {
+  background-color: #FFFFFF;
+  color: #000;
+}
+table.tablesorter tbody tr:nth-child(even) {
+  background-color: #FAFAFA;
+  color: #000;
+}
+table.tablesorter th:hover, table.tablesorter tbody tr:hover {
+  background-color: #DDDDDD;
+}
+table.no-border td {
+  border:0;
+  vertical-align:middle;
+}
+.headerSortUp {
+  text-decoration:overline;
+}
+.headerSortDown {
+  text-decoration:underline;
+}
+select.c_extra {
+  width:100%;
+}
+.overflow {
+  height: 80px;
+}
+.c_rang {
+ text-align:center;
+}
+.c_mono {
+ font-family:monospace !important;
+ white-space:pre;
+}
+.c_den {
+ font-family:monospace;
+ font-size:0.5em;
+ width:1%;
+}
+.c_out {
+  text-decoration:line-through;
+}
+.c_float {
+  width:1%;
+  text-align:right;
+  white-space:nowrap;
+}
+.c_small {
+  font-size:.5em;
+}
+.c_small_c {
+  text-align:center;
+  font-size:.4em;
+  font-weight:normal;
+}
+.c_small_f {
+  width:1%;
+  text-align:right;
+  white-space:nowrap;
+  font-size:.4em;
+}
+.c_year {
+  width:1%;
+}
+.c_name {
+  width:30%;
+  wwhite-space:nowrap;
+}
+.c_club {
+  width:70%;
+}

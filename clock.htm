@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=EDGE">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=yes">
+    <title>Clock</title>
+    <script async type="text/javascript" src="/lib/js/fallback.min.js"></script>
+    <script type="text/javascript">
+    function load(){
+      fallback.load({
+        // css
+        'css_ui': [
+//          'https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.min.css',
+          'themes/base/jquery-ui.min.css'
+        ],
+        'css_awesome': [
+//          'https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css',
+          //'https://use.fontawesome.com/568396c591.js',
+          '/lib/css/font-awesome.min.css'
+        ],
+        // js
+        'jQuery': [
+//          'https://code.jquery.com/jquery-3.1.1.min.js',
+          '/lib/js/jquery.min.js'
+        ],
+        'jQuery.ui': [
+//          'https://code.jquery.com/ui/1.12.1/jquery-ui.min.js',
+          '/lib/js/jquery-ui.min.js'
+        ],
+        'set_lang': [
+//          'http://www.bayern-surf.de/krocka/cdn/lib/js/locale.min.js',
+          '/lib/js/locale.js'
+        ],
+        'jQuery.printf': [
+          '/lib/js/jquery.printf.js'
+        ],
+        'jQuery.runner': [
+          '/lib/js/jquery.runner.min.js'
+        ]
+      }, {
+        shim: {
+          'jQuery.ui':                     ['jQuery'],
+          'jQuery.printf':                 ['jQuery.ui'],
+          'set_lang':                      ['jQuery'],
+          'jQuery.runner':                 ['jQuery']
+        },
+        callback: function(s, f){
+          start();
+        }
+      });
+    }
+    // -----------------------------------------------------------------
+    var AccessDir = window.location.pathname.substr(
+          1,
+          window.location.pathname.lastIndexOf("/")
+        ),
+        T,                                // runner
+        TIMER     = null,                 // end of timer 0:0
+        USER      = opener.oUser.dbuser,  // user
+        MODE      = "AUTONOM",            // default mode
+        MODE_FILE = "clock.dat",          // master file
+        DIR_LANG  = "locale";             // directory with languages
+    // -----------------------------------------------------------------
+    function start() {
+      $(window)
+      .on("unload", function(ev){
+        if($("select[name=mode]").val() == "MASTER"){
+          $.post("/unl/" + AccessDir+MODE_FILE);
+        }
+      })
+      // ...................................................................
+      setInterval(master_slave, 1000);
+      set_lang("de-de", function(){
+        get_mode(start);
+      });
+      // clock mode ........................................................
+      function get_mode(callBack){
+        $.post(MODE_FILE, function(D){
+          var L = D.split("\n");
+          if(L[0] == USER){
+          } else {
+            $("option[value=MASTER]").prop("disabled", true);
+          }
+          if(callBack)
+            callBack(D);
+        }, "text")
+        .fail(function(er){
+          $("#runner").text("");
+          $("select[name=mode]").val(MODE);
+          if(callBack)
+            callBack();
+        });
+      }
+      // start .............................................................
+      function start(D){
+        // .................................................................
+        T = $('#runner').runner({
+          countdown: $("#id_timer").val() != "STOP",
+          startAt:   getMiS(),
+          stopAt:    0
+        })
+        .on('runnerFinish', finish);
+        // ...................................................................
+        $("input[name=timer_val]").change(function(ev){
+          if(T.runner("info").running)
+            return;
+          T.runner({
+            countdown: $("#id_timer").val() != "STOP",
+            startAt:   $("#id_timer").val() != "STOP" ? getMiS() : 0,
+            stopAt:    $("#id_timer").val() != "STOP" ? 0 : null
+          })
+          .runner("reset");
+        });
+        // ...................................................................
+        $("button").button().click(function(ev){
+          if(TIMER){
+            clearInterval(TIMER);
+            TIMER = false;
+            $("#runner").css({
+              "color":  ""
+            });
+            $("#runner").show();
+          }
+          var c = $(this).data("choice");
+          switch(c){
+            case "START_STOP":
+              T.runner('toggle');
+              break;
+            case "RESET":
+              if(!T.runner("info").running)
+                $("input[name=timer_val]").change();
+              break;
+            default:
+              console.log(c);
+          }
+        });
+        // ...................................................................
+        $("select").selectmenu({
+          position: {
+            collision: "flip"
+          },
+          select: function(ev){
+            if(this.name == "clock_type"){  // type
+              $("input[name=timer_val]").change();
+            } else {                        // mode
+              switch(this.value){
+                case "MASTER":
+                  save_mode();
+                  $("input[name=timer_val]").prop("disabled", false);
+                  $("select[name=clock_type]").selectmenu("enable");
+                  $("button").button("enable");
+                  $("input[name=timer_val]").change();
+                  MODE = "MASTER";
+                  return;
+                case "SLAVE":
+                  T.runner('stop');
+                  $("input[name=timer_val]").prop("disabled", true);
+                  $("select[name=clock_type]").selectmenu("disable");
+                  $("button").button("disable");
+                  $("#runner").text("");
+                  break;
+                case "AUTONOM":
+                  $("input[name=timer_val]").prop("disabled", false);
+                  $("select[name=clock_type]").selectmenu("enable");
+                  $("button").button("enable");
+                  $("input[name=timer_val]").change();
+                  break;
+              }
+              if(MODE == "MASTER") {
+                $.post("/unl/" + AccessDir+MODE_FILE);
+              }
+              MODE = this.value;
+            }
+          }
+        })
+        .click(function(ev){
+        });
+        // ...................................................................
+      //  $("input[type=radio]").checkboxradio({icon: false});
+        $("div.fieldset").controlgroup();
+        // ...................................................................
+        $("input[name=timer_val]").height($("div.fieldset span").height() - 2);
+      }
+      // ...................................................................
+      function save_mode(){
+        $.post("/sto/" + AccessDir+MODE_FILE,
+          USER+"\n"+$("#runner").text().replace(/\..*$/g, "")
+        );
+      }
+      // ...................................................................
+      function master_slave(){
+    //console.log($("select[name=mode]").val());
+        switch($("select[name=mode]").val()){
+          case "AUTONOM":
+            break;
+          case "MASTER":
+            save_mode();
+            break;
+          case "SLAVE":
+            get_mode(function(D){
+              if(typeof D == "undefined"){
+                return;
+              }
+              var L = D.split("\n");
+              $("#runner").text(L[1]);
+            })
+            break;
+        }
+      }
+      // ...................................................................
+      function getMiS(){
+        var v = $("input[name=timer_val]").val(),
+            a = v.split(":"),
+            m = 0;
+        for(var i in a){
+          m = 60 * m + parseFloat(a[i]);
+        }
+        m = 1000 * m;
+        return m;
+      }
+      // ...................................................................
+      function finish(ev, info){
+        $("#runner").css({
+          "color":  "red"
+        });
+        TIMER = setInterval(function(){
+          if(window.blink)
+            $("#runner").show();
+          else
+            $("#runner").hide();
+          window.blink = !window.blink;
+        }, 500);
+      }
+    };
+  </script>
+  </head>
+<style type="text/css" id="css">
+<!--
+html, body {
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  height:100%;
+  width:100%;
+  margin:0;
+  padding:0;
+  border:0;
+}
+body {
+  font-size:14px;
+  width: 100%;
+}
+table#clock {
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  height:100%;
+  width:100%;
+  margin:0;
+  padding:0;
+  border:0;
+}
+table#clock td {
+  white-space:nowrap;
+  text-align:center;
+  vertical-align:middle;
+}
+#val {
+  font-size:6em;
+  font-weight:bold;
+}
+.fieldset {
+  white-space:nowrap;
+}
+.fieldset span{
+  margin:0;
+}
+select + .ui-selectmenu-button {
+  width:6em !important;
+}
+input[name=timer_val] {
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  margin:0;
+  padding:0;
+}
+-->
+</style>
+<body onload="load()">
+  <table id="clock">
+    <tr>
+      <td id="val">
+        <span id="runner"></span>
+      </td>
+    </tr>
+    <tr>
+      <td style="height:1%">
+        <div class="fieldset">
+          <span style="float:left;display:inline-block">
+            <select name="mode" style="">
+              <option value="AUTONOM"><div>AUTONOM</div></option>
+              <option value="MASTER"><div>MASTER</div></option>
+              <option value="SLAVE"><div>SLAVE</div></option>
+            </select>
+          </span>
+          <span style="float:left;display:inline-block">
+            <select name="clock_type" id="id_timer">
+              <option value="TIMER" class="lang"><div>Timer</div></option>
+              <option value="STOP" class="lang"><div>Stopwatch</div></option>
+            </select>
+          </span>
+          <span style="float:left">
+            <input type="text" name="timer_val" value="05:00" size="10" class="ui-widget-content" style="text-align:center">
+          </span>
+          <button data-choice="START_STOP">
+            <span class="lang">Start</span>
+            /
+            <span class="lang">Stop</span>
+          </button>
+          <button data-choice="RESET" class="lang">Reset</button>
+        </div>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

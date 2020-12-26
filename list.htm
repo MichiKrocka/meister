@@ -1,0 +1,1550 @@
+<!DOCTYPE html>
+<html style="width:100%;height:100%">
+<head>
+  <meta http-equiv="X-UA-Compatible" content="IE=EDGE">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1.0, user-scalable=yes">
+  <title class="lang">List</title>
+</head>
+<style type="text/css" id="css">
+<!--
+html, body {
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  height:100%;
+  width:100%;
+  margin:0;
+  padding:0;
+  border:0;
+}
+@media print {
+  html,body {
+    width: 210mm;
+    padding:2px;
+  }
+  #cnt {
+    width: 210mm;
+  }
+  table th, table td {
+    border:0;
+  }
+  table, thead, thead tr, tfoot, tfoot tr, table th, table td {
+    border-width:0px !important;
+  }
+  button.menu {
+    display:none;
+  }
+}
+thead.ui-widget-header {
+  background: #F8F8F8;
+}
+tr.ui-state-highlight th {
+  white-space:nowrap;
+}
+button.menu {
+  position:fixed;
+  top:10px;
+  right:5px;
+  z-index:10000;
+  transparent:5;
+}
+p.c_big {
+  position:relative;
+  top:25%;
+  font-size:14vh;
+  vertical-align: middle;
+  text-align: center;
+  width:100%;
+}
+-->
+</style>
+
+<script async type="text/javascript" src="/lib/js/fallback.min.js"></script>
+<script language="JavaScript" type="text/javascript">
+var oFallback = {
+  // css
+  'css_ui': [
+//    'https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.min.css',
+    'themes/base/jquery-ui.min.css'
+  ],
+  'css_awesome': [
+//    'https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css',
+    //'https://use.fontawesome.com/568396c591.js',
+    '/lib/css/font-awesome.min.css'
+  ],
+  'css_list': [
+//    'http://www.bayern-surf.de/krocka/cdn/meister/css/list.min.css',
+    'css/list.css'
+  ],
+  // js
+  'jQuery': [
+//    'https://code.jquery.com/jquery-3.1.1.min.js',
+    '/lib/js/jquery.min.js'
+  ],
+  'jQuery.ui': [
+//    'https://code.jquery.com/ui/1.12.1/jquery-ui.min.js',
+    '/lib/js/jquery-ui.min.js'
+  ],
+  'set_lang': [
+//    'http://www.bayern-surf.de/krocka/cdn/lib/js/locale.min.js',
+    '/lib/js/locale.js'
+  ],
+  'jQuery.printf': [
+//    'http://www.bayern-surf.de/krocka/cdn/lib/js/jquery.printf.min.js',
+    '/lib/js/jquery.printf.min.js'
+  ],
+  'jQuery.tablesorter': [
+    '/lib/js/jquery.tablesorter.min.js'
+  ],
+  'date_time': [
+//    'http://www.bayern-surf.de/krocka/cdn/lib/js/date_time.min.js',
+    '/lib/js/date_time.js'
+  ],
+  'oClass': [
+//    'http://www.bayern-surf.de/krocka/cdn/meister/js/class.min.js',
+    'js/class.js'
+  ]
+};
+function load(){
+  window.route = opener.route;
+  if(window.route == "#"){
+    for(var o in oFallback){
+      oFallback[o].reverse();
+    }
+  }
+  var E = document.getElementById("cnt"),
+      i = 0,
+      T = setInterval(function(){
+        E.innerHTML = ++i;
+      }, 1000);
+  fallback.load(
+    oFallback,
+    {
+      shim: {
+        'jQuery.ui':                     ['jQuery'],
+        'jQuery().tablesorter':          ['jQuery'],
+        'jQuery.printf':                 ['jQuery.ui'],
+        'jQuery.tablesorter':            ['jQuery'],
+        'set_lang':                      ['jQuery'],
+        'date_time':                     ['jQuery','jQuery.printf'],
+        'oClass':                        ['jQuery']
+      }
+    }
+  );
+  fallback.ready(function(){
+    $(function() {
+      // add new widget called indexFirstColumn
+      $.tablesorter.addWidget({
+        // give the widget a id
+        id: "indexFirstColumn",
+        // format is called when the on init and when a sorting has finished
+        format: function(table) {
+          // loop all tr elements and set the value for the first column
+          var LAST = "",
+              ix   = -1,
+              ix_l = 1,
+              COL  = $("thead th.headerSortDown, thead th.headerSortUp").index(),
+              NCOL = $(table).data("ncol");
+          if(typeof NCOL == "undefined")
+            NCOL = 4;
+          if(COL >= 0){
+            if(COL > NCOL)
+              COL = 2 * COL - NCOL;
+            COL = ':nth-child('+(COL+1)+')';
+          } else
+            COL = ":last";
+          for(var i = 0; i <= table.tBodies[0].rows.length; i++) {
+            var CUR = $("tbody tr:eq(" + (i - 1) + ") td"+COL,table).text();
+            if(LAST != CUR) {
+              ix += ix_l;
+              ix_l = 1;
+            } else
+              ix_l++;
+            $("tbody tr:eq(" + (i - 1) + ") td:first",table).text((ix > 0 ? ix : 1)+".");
+            LAST = CUR;
+          }
+        }
+      });
+    });
+    clearInterval(T);
+    start();
+  });
+}
+//oReport.open = true; <=> public
+// -----------------------------------------------------------------
+function start() {
+  // add new widget called indexFirstColumn
+  $.tablesorter.addWidget({
+    // give the widget a id
+    id: "indexFirstColumn",
+    // format is called when the on init and when a sorting has finished
+    format: function(table) {
+      // loop all tr elements and set the value for the first column
+      var LAST = "",
+          ix   = -1,
+          ix_l = 1,
+          COL  = $("thead th.headerSortDown, thead th.headerSortUp").index(),
+          NCOL = $(table).data("ncol");
+      if(typeof NCOL == "undefined")
+        NCOL = 4;
+      if(COL >= 0){
+        if(COL > NCOL)
+          COL = 2 * COL - NCOL;
+        COL = ':nth-child('+(COL+1)+')';
+      } else
+        COL = ":last";
+      for(var i = 0; i <= table.tBodies[0].rows.length; i++) {
+        var CUR = $("tbody tr:eq(" + (i - 1) + ") td"+COL,table).text();
+        if(LAST != CUR) {
+          ix += ix_l;
+          ix_l = 1;
+        } else
+          ix_l++;
+        $("tbody tr:eq(" + (i - 1) + ") td:first",table).text((ix > 0 ? ix : 1)+".");
+        LAST = CUR;
+      }
+    }
+  });
+};
+// -----------------------------------------------------------------
+var TIME_WAIT  = 5000,
+    TIME_OUT   = 40,
+    TIME_PIXEL = 1,
+    MODE_FILE = "clock.dat";          // master file
+var oReport  = {},    // data from parent
+    oComp    = {},    // competition
+    CompBas  = "",    // sqlite base
+    oC       = {},    // class
+    aRound   = [],    // rounds
+    aA       = [],    // competitors
+    aT       = [],    // teams
+    aG       = [],    // devices
+    Dir      = "",    // directery for extra
+    Win      = null;  // window for extra
+var AccessDir = window.location.pathname.substr(
+      1,
+      window.location.pathname.lastIndexOf("/")
+    );
+var html_pre = "";
+// -----------------------------------------------------------------
+function start(){
+  var FS0 = parseInt($("body").css("font-size")),
+      FS  = parseInt(FS0 / 10);
+  xScroll       = false;
+  xRepeat       = true;
+  oReport       = $.parseJSON(window.name);
+  DIR_LANG      = oReport.DIR_LANG;
+  SQL_BASE_DIR  = oReport.SQL_BASE_DIR;
+  SQL_SYS_BASE  = oReport.SQL_SYS_BASE;
+  SQL_COMP_BASE = oReport.SQL_COMP_BASE;
+  set_lang(oReport.lang);
+  // ---------------------------------------------------------------
+  $("body").keyup(function(ev){
+    var K = ev.which | ev.shiftKey<<8 | ev.ctrlKey<<9  | ev.altKey<<10;
+    switch(K){
+      case 1195:  // Alt +
+        var fs = parseInt($("body").css("font-size"));
+        fs += FS;
+        $("body").css("font-size", fs+"px");
+        break;
+      case 1197:  // Alt -
+        var fs = parseInt($("body").css("font-size"));
+        fs -= FS;
+        $("body").css("font-size", fs+"px");
+        break;
+      case 1072:  // Alt -0
+        $("body").css("font-size", FS0+"px");
+        break;
+      case 1106:  // Alt R
+        message("OK", function(){
+          load_data(oReport.recId, oReport.class_id, LAST_FUN);
+          scrollTo(0, 0);
+        });
+        break;
+      case 1064:  // Alt DOWN
+        message("OK");
+        xScroll = !xScroll;
+        if(xScroll) {
+          scrollRepeat(function(){
+            load_data(oReport.recId, oReport.class_id, LAST_FUN);
+          });
+        }
+        break;
+      case 1101:  // Alt M
+        menu();
+        break;
+      case 283:    // Sift ESC
+        window.close();
+      case 112:    // F1
+        alert_msg(
+          '<ul class="c_mono">'+
+            '<li>[F1      ] '+_('Help')+'</li>'+
+            '<li>[ALT +   ] '+_('Zoom in')+'</li>'+
+            '<li>[ALT -   ] '+_('Zoom out')+'</li>'+
+            '<li>[ALT 0   ] '+_('Zoom 100%')+'</li>'+
+            '<li>[ALT R   ] '+_('Reload')+'</li>'+
+            '<li>[ALT DOWN] '+_('Scroll')+'</li>'+
+            '<li>[ALT M   ] '+_('Menu')+'</li>'+
+          '</ul>',
+          _("Help")
+        );
+        break;
+      default:
+        //console.log(K);
+        //window.opener.console.log("list", K);
+        return;
+    }
+    ev.preventDefault();
+    return false;
+  });
+  // ---------------------------------------------------------------
+  $("#cnt")
+  .on("contextmenu", function(ev){
+    ev.preventDefault();
+    menu();
+    return false;
+  })
+  .on("dblclick", function(ev){
+    ev.preventDefault();
+    menu();
+    return false;
+  });
+  $("button.menu")
+  .button()
+  .click(function(ev){
+    ev.preventDefault();
+    menu();
+    return false;
+  });
+  if(oReport.hide_menu)
+      $("button.menu").hide();
+  // ---------------------------------------------------------------
+  switch(oReport.type){
+    case "ONE":
+      load_data(oReport.recId, oReport.class_id, ONE);
+      break;
+    case "TEAM":
+      Dir = "team";
+      load_data(oReport.recId, oReport.class_id, TEAM);
+      break;
+    case "PROJECTOR":
+      oReport.open = true;
+      xScroll = true;
+      load_projector(0);
+      break;
+    default:
+      alert_msg(oReport.type+"?", false, function(){
+        window.close();
+      });
+      console.log(oReport.type+"?", oReport);
+  }
+};
+// ---------------------------------------------------------------------
+function message(msg, callBack, timeOut){
+  $('<div><p style="text-align:center">'+msg+'</p></div>')
+  .dialog({
+    modal:false,
+    open: function(){
+      var self = this;
+      if(typeof timeOut == "undefined")
+        timeOut = 500;
+      if(timeOut > 0)
+        setTimeout(function(){
+          $(self).dialog('close');
+        }, timeOut);
+    },
+    close: function(){
+      if(callBack)
+        callBack();
+    }
+  });
+}
+// -----------------------------------------------------------------
+function show(html){
+  if(html_pre != html){
+    html_pre = html;
+    $("#cnt").html(html);
+  }
+}
+// -----------------------------------------------------------------
+function load_projector(offset){
+  var o = {
+    base: SQL_SYS_BASE,
+    cmd:  [{
+      sgn:   "PROJ",
+      query: "SELECT * FROM projector WHERE sequence=? AND active='x' ORDER BY name LIMIT 1 OFFSET ?",
+      para: [oReport.sequence, offset]
+    }]
+  };
+  o.cmd = JSON.stringify(o.cmd);
+  $.post("/sql", o, function(D){
+    if(D.PROJ.length){
+      exec_projector(D.PROJ[0], offset);
+      return;
+    }
+    if(offset == 0){
+      alert_msg(_("Projector")+" ("+oReport.sequence+")?");
+    } else
+      load_projector(0);
+  });
+}
+// -----------------------------------------------------------------
+function exec_projector(oP, offset){
+  offset++;
+  aRound = [];
+  for(var r in oP.round)
+    aRound.push(oP.round[r] - 1);
+  switch(oP.type){
+    case "TABLE":
+      load_data(oP.comp_id, oP.class_id, function(){
+        eval(oP.report+"()");
+      });
+      break;
+    case "MESSAGE":
+      show(oP.message);
+      break;
+    case "BOARD":
+      BOARD(oP);
+      break;
+    case "TIMER":
+      TIMER();
+      break;
+    default:
+      console.log(oP.type+"?");
+      break;
+  }
+  scrollRepeat(function(){
+    load_projector(offset);
+  });
+}
+// -----------------------------------------------------------------
+function TIMER(){
+  $.post(MODE_FILE, function(D){
+    var Time = D.replace(/[^ ]*\n/g, "");
+    show('<p class="c_big">'+Time+'</p>');
+    window.timer = setTimeout(TIMER, 500);
+  })
+  .fail(function(err){
+  });
+}
+// -----------------------------------------------------------------
+function BOARD(oP){
+  $("button.menu").hide();
+  // load  events
+  var o = {
+    base: SQL_SYS_BASE,
+    cmd:  [{
+      sgn:   "EVENT",
+      query: "SELECT *,(SELECT datum||code FROM competition WHERE competition.id=?) AS comp FROM sys_event WHERE comp_id=? AND sex=? AND ((julianday(CURRENT_TIMESTAMP) - julianday(stmp)) * 1440) < 60 ORDER BY roll,state DESC,stmp DESC",
+      para: [oP.comp_id, oP.comp_id, oP.sex]
+    }]
+  };
+  var aEvent = [];
+  o.cmd = JSON.stringify(o.cmd);
+  $.post("/sql", o, function(D){
+    if(D.EVENT.length){
+      aEvent = D.EVENT;
+      for(var e in aEvent)
+        aEvent[e].CompBase = $.sprintf(
+          "%s_%s.sqlite",
+          aEvent[e].comp.substr(0, 10).replace(/-/g, "_"),
+          aEvent[e].comp.substr(10)
+        );
+      load_compr(0);
+    } else {
+      aEvent = [];
+      show(_("No rows to display"));
+    }
+  });
+  // ...............................................................
+  // load competitor
+  function load_compr(e){
+    if(e >= aEvent.length){
+      make_boards();
+      return;
+    }
+    o = {
+      base: SQL_COMP_BASE + aEvent[e].CompBase,
+      cmd:  [{
+        sgn:   "COMPS",
+        query: "SELECT surename||' '||forename AS Name,val,(SELECT r FROM class WHERE class.id=class_id) AS round,(SELECT val FROM class WHERE class.id=class_id) AS class_val,IFNULL((SELECT name FROM team WHERE team.id=team_id),'') AS team,club FROM competitor WHERE id=?",
+        para: [aEvent[e].compr_id]
+      }]
+    };
+    o.cmd = JSON.stringify(o.cmd);
+    $.post("/sql", o, function(D){
+      if(D.COMPS.length){
+        aEvent[e].oA = D.COMPS[0];
+        aEvent[e].oA.val = $.parseJSON(aEvent[e].oA.val);
+        aEvent[e].oC = {val:$.parseJSON(aEvent[e].oA.class_val)};
+        //oClass.GroupRoll(aEvent[e].oC);
+        load_compr(e + 1);
+      }
+    });
+  }
+  // ...............................................................
+  function make_boards(){
+    var roll = "",
+        iR   = Number.isInteger(oP.round) ? oP.round - 1 : 0,
+        TR   = [],
+        aDev = [];
+
+    for(var e in aEvent){
+      var E = aEvent[e];
+      oClass.CalcOne(E.oC, E.oA, iR);
+      // next roll
+      if(roll != E.roll){
+        roll = E.roll;
+        // roll -> devices
+        var sDev = [],
+            Er  = E.roll.split(",");
+        aDev = [];
+        for(var i in E.oC.val[iR].A){
+          var Cr = E.oC.val[iR].A[i].r.split(",");
+          var c = Er.filter(function(n) {
+              return Cr.indexOf(n) != -1;
+          });
+          if(c.length){
+            sDev.push(E.oC.val[iR].A[i].g);
+            aDev.push(i);
+          }
+        }
+        TR.push($.sprintf(
+          '<tr class="ui-widget-header">'+
+            '<td colspan="2" style="text-align:left">%s</td>'+
+            '<td class="c_small_c">D</td>'+
+            '<td class="c_small_c">E</td>'+
+            '<td class="c_small_c">N</td>'+
+            '<td class="c_small_c">'+_("Final value")+'</td>'+
+          '</tr>',
+          sDev.join(" + ")
+        ));
+      }
+      // competitor
+      for(var d in aDev){
+        if(E.oA.val[iR][aDev[d]].S == "" && E.state != "WAIT")
+          continue;
+        TR.push($.sprintf(
+          '<tr>'+
+            '<td style="width:1%%;white-space:nowrap">%s</td>'+
+            '<td class="c_small">%s</td>'+
+            (E.state == "WAIT" ?
+            '<td colspan="4" style="text-align:center">BEREIT</td>'
+            :
+            '<td class="c_small_f">%.2f</td>'+
+            '<td class="c_small_f">%.2f</td>'+
+            '<td class="c_small_f">%.2f</td>'+
+            '<td class="c_float">%.3f</td>'
+            )+
+          '</tr>',
+          E.oA.Name,
+          E.oA.team == "" ? E.oA.club : E.oA.team,
+          E.oA.val[iR][aDev[d]].D,
+          E.oA.val[iR][aDev[d]].E,
+          E.oA.val[iR][aDev[d]].N,
+          E.oA.val[iR][aDev[d]].S
+        ));
+      }
+    }
+    show(
+      '<table class="all no-border" style="font-size:4em">'+
+        '<tbody>'+TR.join("")+'</tbody>'+
+      '</table>'
+    );
+  }
+}
+// -----------------------------------------------------------------
+function load_data(comp_id, class_id, callBack){
+  var o = {
+    base: SQL_SYS_BASE,
+    cmd:  [{
+      sgn:   "COMP",
+      query: "SELECT * FROM competition WHERE id=?",
+      para: [comp_id]
+    }]
+  };
+  o.cmd = JSON.stringify(o.cmd);
+  $.post("/sql", o, function(D){
+    if(D.COMP.length){
+      oComp = D.COMP[0];
+      CompBase = $.sprintf("%s_%s.sqlite", oComp.datum.replace(/-/g, "_"), oComp.code);
+      var Datum = oComp.datum.split("-");
+      if(oReport.lang != "en-en")
+        oComp.datum = Datum[2]+"."+Datum[1]+"."+Datum[0];
+      load_class();
+    } else
+      console.error("Competition?");
+  });
+  // ...............................................................
+  function load_class(){
+    o = {
+      base: SQL_COMP_BASE + CompBase,
+      cmd:  [{
+        sgn:   "CLASS",
+        query: "SELECT * FROM class WHERE id=?",
+        para: [class_id]
+      }]
+    };
+    o.cmd = JSON.stringify(o.cmd);
+    $.post("/sql", o, function(D){
+      if(D.CLASS.length){
+        oC = D.CLASS[0];
+        oC.val = $.parseJSON(oC.val);
+        if(oC.val === null){
+          message(_("Class")+" ("+oC.name+")?", null, 0);
+          return;
+        }
+        var iR = ((oC.r != "" && oC.r !== null) ?
+                  oC.r : (oComp.r == "" ? 1 : oComp.r)) - 1;
+        iR = Math.min(iR, oC.val.length - 1);
+        aRound = [iR];
+        load_competitors();
+      } else
+        console.error("Class?");
+    });
+  }
+  // ...............................................................
+  function load_competitors(){
+    o = {
+      base: SQL_COMP_BASE + CompBase,
+      cmd:  [{
+        sgn:   "COMPS",
+        query: "SELECT * FROM competitor WHERE class_id=?",
+        para: [class_id]
+      }]
+    };
+    o.cmd = JSON.stringify(o.cmd);
+    $.post("/sql", o, function(D){
+      if(D.COMPS.length){
+        aA = D.COMPS;
+        for(var i in aA){
+          var val = oClass.DefaultVal(oC.val, aA[i].val == "" ? {} : $.parseJSON(aA[i].val));
+          aA[i].val = val;
+//          aA[i].val = $.parseJSON(aA[i].val);
+        }
+        load_teams();
+      } else
+        console.error("Competitors?");
+    });
+  }
+  // ...............................................................
+  function load_teams(){
+    o = {
+      base: SQL_COMP_BASE + CompBase,
+      cmd:  [{
+        sgn:   "TEAMS",
+        query: "SELECT * FROM team WHERE class_id=?",
+        para: [class_id]
+      }]
+    };
+    o.cmd = JSON.stringify(o.cmd);
+    $.post("/sql", o, function(D){
+      if(D.TEAMS.length){
+        aT = D.TEAMS;
+      } else
+        aT = [];
+      callBack();
+    });
+  }
+}
+// -----------------------------------------------------------------
+function evaluate(S, R){
+  if(oC.formula == "")
+    return S;
+  var R = eval(oC.formula);
+  return R;
+}
+// -----------------------------------------------------------------
+function ONE(){
+  LAST_FUN = ONE;
+  Dir = "one";
+  oClass.CalcAll(oC, aA, aRound, "x")
+  var T1 = ONE_Table();
+  oClass.CalcAll(oC, aA, aRound, "-")
+  var T2 = ONE_Table('<h1>'+_("Noncompetitive")+'</h1>');
+  if(T1 == "" && T2 == ""){
+    if(!oReport.open)
+      alert_msg(_("No rows to display")+" ("+oC.name+")");
+    else
+      show(_("No rows to display")+" ("+oC.name+")");
+    return;
+  }
+  show(T1+T2);
+  $("table.tablesorter", "#cnt").tablesorter({
+    widgets: ['zebra', 'indexFirstColumn'],
+    headers:{
+      0:{sorter:false}
+    },
+    debug:    false
+  });
+  // ...............................................................
+  function ONE_Table(caption){
+    var iR = aRound[0],
+        A  = oC.val[iR].A,
+        TH = [],
+        TB = [];
+    // print table body
+    for(var i in aA){
+      if(typeof aA[i].SS == "undefined" || aA[i].SS == "")
+        break;
+      var TR = [];
+      for(var g in A){
+        TR.push(
+          aA[i].val[iR][g].S === "" ?
+          $.sprintf(
+            '<td class="c_%s %s c_float"></td>'+
+            '<td class="c_den c_float"></td>',
+            g, aA[i].val[iR][g].X == "-" ? "c_out" : ""
+          ) :
+          $.sprintf(
+            '<td class="c_%s %s c_float">%.3f</td>'+
+            '<td class="c_den c_float">%.3f<br>%.3f<br>%.3f</td>',
+            g, aA[i].val[iR][g].X ? "" : "c_out",
+            aA[i].val[iR][g].S,
+            aA[i].val[iR][g].D,
+            aA[i].val[iR][g].E,
+            aA[i].val[iR][g].N
+          )
+        );
+      }
+      TR =
+        '<td class="c_rang c_int">'+aA[i].Rang+'.</td>'+
+        '<td class="c_name">'+aA[i].surename + ' ' + aA[i].forename + '</td>'+
+        '<td class="c_year">'+aA[i].birthday.substr(0,  4)+'</td>'+
+        '<td class="c_club">'+aA[i].club+'</td>'+
+        TR.join("")+
+        '<td class="c_sum c_float">'+
+        $.sprintf("%.3f", aA[i].SS)+
+        '</td>';
+
+      TB.push('<tr>'+TR+'</tr>');
+    }
+    if(TB.length == 0){
+      return "";
+    }
+    //  print header
+    for(var i in oC.val[iR].A){
+      var A = oC.val[iR].A[i];
+      TH.push('<th colspan="2">'+A.g+'</th>');
+    }
+    var THeader =
+      '<tr class="ui-state-highlight">'+
+        '<th>#</th>'+
+        '<th>'+_("Name")+'</th>'+
+        '<th>'+_("Year")+'</th>'+
+        '<th>'+_("Club")+'</th>'+
+        TH.join("")+
+        '<th>'+_("Sum")+'</th>'+
+      '</tr>';
+    return ''+
+      '<table class="tablesorter">'+
+        (caption ?
+         '<caption><h1>'+caption+'</h1></caption>' : ''
+        )+
+        '<thead class="ui-widget-header">'+
+          (oComp.logo != "" && oComp.logo != null ?
+          '<tr>'+
+            '<th style="border-bottom:0;padding:10px" colspan="'+
+              (4+oC.val[iR].A.length*2+1)+'">'+
+              oComp.logo+
+            '</th>'+
+          '</tr>': ''
+          )+
+          '<tr>'+
+            '<th style="text-align:left;border-top:0" colspan="'+
+              (4 + oC.val[iR].A.length * 2 + 1)+'">'+
+              oComp.datum+" "+
+              oComp.info.replace(/\n/g, "<br>")+
+              '<br>'+
+              oC.name+
+              ' / '+
+              oC.val[iR].name+
+            '</th>'+
+          '</tr>'+
+          THeader+
+        '</thead>'+
+        '<tfoot class="ui-widget-header">'+
+          THeader+
+          '<tr>'+
+            '<td colspan="'+(4+oC.val[iR].A.length*2+1)+'" class="c_den" style="text-align:right">'+
+            _("Note: Gymnastic values")+
+            '</td>'+
+          '</tr>'+
+        '</tfoot>'+
+        '<tbody>'+
+          TB.join("")+
+        '</tbody>'+
+      '</table>';
+  }
+}
+// -----------------------------------------------------------------
+function ONE_ALL(){
+  LAST_FUN = ONE_ALL;
+  Dir = "one";
+  oClass.CalcAll(oC, aA, aRound, "x")
+  var TH = [],
+      TB = [],
+      sR = [];
+  for(var r in aRound){
+    sR.push(oC.val[r].name);
+    TH.push('<th>'+oC.val[r].name+'</th>');
+  }
+  sR = sR.join(" + ");
+  //  print header
+  var THeader =
+    '<tr class="ui-state-highlight">'+
+      '<th>#</th>'+
+      '<th>'+_("Name")+'</th>'+
+      '<th>'+_("Year")+'</th>'+
+      '<th>'+_("Club")+'</th>'+
+      TH.join("")+
+      (aRound.length > 1 ? '<th>'+_("Sum")+'</th>' : "")+
+    '</tr>';
+  // print table body
+  for(var i in aA){
+    if(typeof aA[i].SS == "undefined" || aA[i].SS == "")
+      break;
+    var TR = [$.sprintf(
+      '<td class="c_rang">%i.</td>'+
+      '<td class="c_name">%s %s</td>'+
+      '<td class="c_year">%i</td>'+
+      '<td class="c_club">%s</td>',
+      aA[i].Rang,
+      aA[i].surename, aA[i].forename,
+      aA[i].birthday.substr(0,4),
+      aA[i].club
+    )];
+    for(var r in aRound)
+      TR.push($.sprintf(
+        '<td class="g c_float">%.3f</td>',
+        aA[i].val[aRound[r]].S
+      ));
+    if(aRound.length > 1)
+      TR.push($.sprintf('<td class="c_sum c_float">%.3f</td>', aA[i].SS));
+    TB.push('<tr>'+TR.join("")+'</tr>');
+  }
+  if(TB.length == 0){
+    if(!oReport.open)
+      alert_msg(_("No rows to display")+" ("+oC.name+")");
+    else
+      show(_("No rows to display")+" ("+oC.name+")");
+    return;
+  }
+  show(
+    '<table class="tablesorter" data-ncol="100">'+
+      '<thead class="ui-widget-header">'+
+        (oComp.logo != "" && oComp.logo != null ?
+        '<tr>'+
+          '<th style="text-align:left;border-bottom:0;padding:10px" colspan="'+
+            (4 + aRound.length + 1)+'">'+
+            oComp.logo+
+          '</th>'+
+        '</tr>': ''
+        )+
+        '<tr>'+
+          '<th style="text-align:left;border-top:0" colspan="'+
+            (4 + aRound.length + 1)+'">'+
+            oComp.datum+" "+
+            oComp.info.replace(/\n/g, "<br>")+
+            '<br>'+
+            oC.name+
+            ' / '+
+            sR+
+          '</th>'+
+        '</tr>'+
+        THeader+
+      '</thead>'+
+      '<tfoot class="ui-widget-header">'+
+        THeader+
+      '</tfoot>'+
+      '<tbody>'+
+        TB.join("")+
+      '</tbody>'+
+    '</table>'
+  );
+  $("table.tablesorter", "#cnt").tablesorter({
+    widgets: ['zebra', 'indexFirstColumn'],
+    headers:{
+      0:{sorter:false}
+    },
+    debug:    false
+  });
+}
+// -----------------------------------------------------------------
+function DEVICES(){
+  if(aG.length == 0){
+    if(!oReport.open)
+      alert_msg(_("No rows to display")+" ("+oC.name+")");
+    else
+      show(_("No rows to display")+" ("+oC.name+")");
+    return;
+  }
+  LAST_FUN = DEVICES;
+  Dir = "devices";
+  aG = oClass.CalcDevices(oC, aA, aRound, "x");
+  var iR = aRound[0],
+      TT = [],
+      caption = oComp.logo != "" && oComp.logo != null ?
+                '<caption>'+oComp.logo+'</caption>' : '';
+  for(var gr in aG){
+    var sR = [],
+        TH = [],
+        G  = oC.aGR[iR][gr].length;
+    // devices .....................................................
+    for(var gi in oC.aGR[iR][gr]){
+      var g = oC.aGR[iR][gr][gi];
+      sR.push(oC.val[iR].A[g].g);
+      TH.push('<th>'+oC.val[iR].A[g].g+'</th>');
+    }
+    // table header ................................................
+    var THeader =
+          '<tr class="ui-state-highlight">'+
+            '<th>#</th>'+
+            '<th>'+_("Name")+'</th>'+
+            '<th>'+_("Year")+'</th>'+
+            '<th>'+_("Club")+'</th>'+
+            TH.join("")+
+            (G > 1 ? '<th>'+_("Final value")+'</th>' : "")+
+          '</tr>',
+        TR = [];
+    // competitors .................................................
+    for(var ix in aG[gr]){
+      var i  = aG[gr][ix][0];
+      if(aG[gr][ix][1] === "")
+        break;
+      var TD = [$.sprintf(
+        '<td class="c_rang">%i.</td>'+
+        '<td class="c_name">%s %s</td>'+
+        '<td class="c_year">%i</td>'+
+        '<td class="c_club">%s</td>',
+        aG[gr][ix][2],
+        aA[i].surename, aA[i].forename,
+        aA[i].birthday.substr(0,4),
+        aA[i].club
+      )];
+      if(G > 1){
+        for(var gi in oC.aGR[iR][gr]){
+          var g = oC.aGR[iR][gr][gi];
+          TD.push($.sprintf(
+            '<td class="g c_float">%.3f</td>',
+            aA[i].val[iR][g].S
+          ));
+        }
+        TD.push($.sprintf('<td class="c_sum c_float">%.4f</td>', aG[gr][ix][1]));
+      } else
+        TD.push($.sprintf('<td class="c_sum c_float">%.3f</td>', aG[gr][ix][1]));
+      TR.push('<tr>'+TD.join("")+'</tr>');
+    }
+    if(!TR.length)
+      continue;
+    // table .......................................................
+    TT.push(
+      '<table class="tablesorter" data-ncol="100">'+
+        caption+
+        '<thead class="ui-widget-header">'+
+          '<tr>'+
+            '<th style="text-align:left;border-top:0" colspan="'+
+              (4 + (G > 1 ? G + 1 : 1))+'">'+
+              oComp.datum+" "+
+              oComp.info.replace(/\n/g, "<br>")+
+              '<br>'+
+              oC.name+
+              ' / '+
+              oC.val[iR].name+
+              ' / '+
+              sR.join(" + ")+
+            '</th>'+
+          '</tr>'+
+          THeader+
+        '</thead>'+
+        '<tfoot class="ui-widget-header">'+
+          THeader+
+        '</tfoot>'+
+        '<tbody>'+
+          TR.join("")+
+        '</tbody>'+
+      '</table>'
+    );
+  }
+  show(TT.join(""));
+  $("table.tablesorter", "#cnt").tablesorter({
+    widgets: ['zebra', 'indexFirstColumn'],
+    headers:{
+      0:{sorter:false}
+    },
+    debug:    false
+  });
+}
+// -----------------------------------------------------------------
+function TEAM(){
+  if(oC.tscores == ""){
+    if(!oReport.open)
+      alert_msg(_("Team scores")+" ("+_("Class")+")"+"!? ("+oC.name+")");
+    else
+      show(_("No rows to display")+" ("+oC.name+")");
+    return;
+  }
+  LAST_FUN = TEAM;
+  Dir = "team";
+  oClass.CalcTeam(oC, aA, aT, aRound);
+  var TH = [],
+      TB = [],
+      SH = [],
+      iR = aRound[0];
+  for(var i in oC.val[iR].A){
+    var A = oC.val[iR].A[i];
+    TH.push('<th>'+A.g+'</th>');
+  }
+  var THeader =
+    '<tr class="ui-state-highlight">'+
+      '<th colspan="'+(4+oC.val[iR].A.length)+'" style="text-align:left">%s</th>'+
+      '<th style="text-align:center">%i.</th>'+
+    '</tr>'+
+    '<tr>'+
+      '<th>#</th>'+
+      '<th>'+_("Name")+'</th>'+
+      '<th>'+_("Rank")+'</th>'+
+      '<th>'+_("Year")+'</th>'+
+      TH.join("")+
+      '<th>'+_("Sum")+'</th>'+
+    '</tr>';
+  var TFoot =
+    '<tr>'+
+      '<td colspan="4"></th>'+
+      '%s'+
+      '<th class="c_float %s">%.3f</th>'+
+    '</tr>';
+  for(var t in aT){
+    if(aT[t].SS == 0)
+      continue;
+    // Header
+    TB.push($.sprintf(THeader, aT[t].name, aT[t].rang));
+    // Body
+    for(var ix in aT[t].comps){
+      var oV = aA[aT[t].comps[ix]];
+      if(oV.val.S == 0)
+        continue;
+      var TG    = [];
+      for(var g in oC.val[iR].A){
+        TG.push($.sprintf(
+          '<td class="c_float %s">%s</td>',
+          oV.val[iR][g].T ? "" : "c_out",
+          oV.val[iR][g].S === "" ? "" :
+            $.sprintf("%.3f", oV.val[iR][g].S)
+        ));
+      }
+      TB.push($.sprintf(
+        '<tr>'+
+          '<td class="c_rang">%i.</td>'+
+          '<td>%s %s</td>'+
+          '<td class="c_rang">%i.</td>'+
+          '<td class="c_rang">%i</td>'+
+          TG.join("")+
+          '<td class="c_float">%.3f</td>'+
+        '</tr>',
+        parseInt(ix) + 1,
+        oV.surename, oV.forename,
+        parseInt(aT[t].comps[ix]) + 1,
+        oV.birthday.substr(0, 4),
+        oV.val[iR].S
+      ));
+    }
+    // Foot
+    var aFootSum = [];
+    for(var j in oC.aGR[iR]){
+      aFootSum.push($.sprintf(
+        '<td class="c_float" colspan="%i">%.3f</td>',
+        oC.aGR[iR][j].length, aT[t].SG[iR][j]
+      ));
+    }
+    TB.push($.sprintf(
+      TFoot,
+      aFootSum.join(""),
+      aT[t].SG[iR].SSv ? "" : "c_out",
+      aT[t].SS
+    ));
+  }
+  show(
+    '<table class="team">'+
+      '<thead class="ui-widget-header">'+
+        (oComp.logo != "" && oComp.logo != null ?
+        '<tr>'+
+          '<th style="text-align:left;border-bottom:0;padding:10px" colspan="'+
+            (4+oC.val[iR].A.length*2+1)+'">'+
+            oComp.logo+
+          '</th>'+
+        '</tr>': ''
+        )+
+        '<tr>'+
+          '<th style="text-align:left;border-top:0" colspan="'+
+            (4+oC.val[iR].A.length*2+1)+'">'+
+            oComp.datum+" "+
+            oComp.info.replace(/\n/g, "<br>")+
+            '<br>'+
+            oC.name+
+            ' / '+
+            oC.val[iR].name+
+          '</th>'+
+        '</tr>'+
+      '</thead>'+
+      '<tbody>'+TB.join("")+'</tbody>'+
+    '</table>'
+  );
+}
+// -----------------------------------------------------------------
+function TEAM_ALL(){
+  LAST_FUN = TEAM_ALL;
+  Dir = "team";
+  oClass.CalcTeam(oC, aA, aT, aRound);
+  var TH = [],
+      TB = [],
+      sR = [];
+  for(var rx in aRound){
+    var r = aRound[rx];
+    sR.push(oC.val[r].name);
+    TH.push('<th>'+oC.val[r].name+'</th>');
+  }
+  var THeader =
+    '<tr class="ui-state-highlight">'+
+      '<th>#</th>'+
+      '<th>'+_("Team")+'</th>'+
+      TH.join("")+
+      '<th>'+_("Sum")+'</th>'+
+    '</tr>';
+  for(var t in aT){
+    var SP = 0;
+    for(var rx in aRound){
+      var r = aRound[rx],
+          R = aT[t].SG[r].R,
+          S = aT[t].SG[r].S;
+      SP += evaluate(S, R);
+    }
+    aT[t].SP = SP;
+  }
+  aT.sort(function(a, b){
+    return b.SP - a.SP;
+  });
+  var S = 0.0;
+      R = 0;
+  // rang
+  for(var t in aT){
+    if(S != aT[t].SP){
+      S = aT[t].SP;
+      R++;
+    }
+    aT[t].rang = R;
+    var TD = [];
+    for(var rx in aRound){
+      var r = aRound[rx];
+      TD.push($.sprintf(
+        '<td class="c_float %s">%.3f</td>',
+        aT[t].SG[r].SSv ? "" : "c_out",
+        aT[t].SG[r].S
+      ));
+    }
+    TB.push($.sprintf(
+      '<tr><td class="c_rang">%i.</td><td>%s</td>%s<td class="c_float">%.3f</td></tr>',
+      R, aT[t].name, TD.join(""), aT[t].SP
+    ));
+  }
+  show(
+    '<table class="team tablesorter" data-ncol="100">'+
+      '<thead class="ui-widget-header">'+
+        (oComp.logo != "" && oComp.logo != null ?
+        '<tr>'+
+          '<th style="text-align:left;border-bottom:0;padding:10px" colspan="'+
+            (3+aRound.length)+'">'+
+            oComp.logo+
+          '</th>'+
+        '</tr>': ''
+        )+
+        '<tr>'+
+          '<th style="text-align:left;border-top:0" colspan="'+
+            (3+aRound.length)+'">'+
+            oComp.datum+" "+
+            oComp.info.replace(/\n/g, "<br>")+
+            '<br>'+
+            oC.name+
+            ' / '+
+            sR.join(" + ")+
+          '</th>'+
+        '</tr>'+
+        '<tr>'+
+          THeader+
+        '</tr>'+
+      '</thead>'+
+      '<tfoot>'+THeader+'</tfoot>'+
+      '<tbody>'+TB.join("")+'</tbody>'+
+    '</table>'
+  );
+  $("table.tablesorter", "#cnt").tablesorter({
+    widgets: ['zebra', 'indexFirstColumn'],
+    headers:{
+      0:{sorter:false}
+    },
+    debug:    false
+  });
+}
+// -----------------------------------------------------------------
+function scrollRepeat(callBack) {
+  function time(){
+    if(window.time_wait)
+      clearTimeout(window.time_wait);
+    if(!xScroll){
+      window.time_wait = setTimeout(time, TIME_WAIT);
+      return;
+    }
+    var p = $(window).scrollTop();
+    scrollBy(0, TIME_PIXEL);
+    if(p == $(window).scrollTop()){
+      setTimeout(function(){
+        if(xRepeat){
+          $(window).scrollTop(0);
+          if(window.timer){
+            clearTimeout(window.timer);
+            window.timer = null;
+          }
+          if(callBack)
+            callBack();
+        }
+        window.time_wait = setTimeout(time, TIME_WAIT);
+      }, TIME_WAIT);
+    } else
+      window.time_out = setTimeout(time, TIME_OUT);
+  }
+  if(window.time_wait)
+    clearTimeout(window.time_wait);
+  window.time_wait = setTimeout(time, TIME_WAIT);
+}
+// -----------------------------------------------------------------
+function menu(){
+  if($("#menu").length)
+    return;
+  var tr = [];
+  for(var i in oC.val)
+    tr.push(
+      '<tr>'+
+        (oC.val.length > 1 ?
+          '<td><input type="checkbox"></td>' : "")+
+        '<td>'+oC.val[i].name+'</td>'+
+        '<td class="c_button" data-choice="ONE">'+_("List")+'</td>'+
+        '<td class="c_button" data-choice="DEVICES">'+_("Devices")+'</td>'+
+        '<td class="c_button" data-choice="TEAM">'+_("Team")+'</td>'+
+      '</tr>'
+    );
+  var $dialog = $('<div>')
+  .html(
+    '<table>'+
+      tr.join("")+
+      (oC.val.length > 1 ?
+        '<tr>'+
+          '<td rowspan="2" colspan="2"><input type="checkbox" class="c_all"></td>'+
+          '<td colspan="3" data-choice="ONE_ALL">'+_("List")+' - '+_("All")+'</td>'+
+        '</tr>'+
+        '<tr>'+
+          '<td colspan="3" data-choice="TEAM_ALL">'+_("Team")+' - '+_("All")+'</td>'+
+        '</tr>'+
+        '</tr>' : ''
+      )+
+      (Dir === "" || oReport.open ? "" :
+        '<tr class="c_select">'+
+          '<td colspan="5" style="text-align:right">'+
+            '<select class="c_extra"></select>'+
+          '</td>'+
+        '</tr>'
+      )+
+    '</table>'
+  )
+  .dialog({
+    resizable: false,
+    height:   "auto",
+    width:    "auto",
+    title:    _("Menu"),
+    modal:    true,
+    buttons:  [{
+      text: _("Close"),
+      click: function(ev){
+        $(this).dialog("close");
+      }
+    }],
+    open: function(){
+      this.xScroll = xScroll;
+      this.xRepeat = xRepeat;
+      xScroll = false;
+      xRepeat = false;
+    },
+    close: function(){
+      xScroll = this.xScroll;
+      xRepeat = this.xRepeat;
+      //$("body").css("overflow", "auto");
+      $(this).dialog("destroy");
+    }
+  });
+  $("input.c_all[type=checkbox]", $dialog).change(function(ev){
+    $("input[type=checkbox]:not(.c_all)", $dialog)
+    .prop("checked", this.checked);
+  });
+  $('td[data-choice]', $dialog)
+  .hover(
+    function(ev){ $(this).addClass("ui-state-focus"); },
+    function(ev){ $(this).removeClass("ui-state-focus"); }
+  )
+  .click(function(ev){
+    $(window).scrollTop(0);
+    var choice = $(this).data("choice"),
+        Round  = $(this).parent().index();
+    switch(choice){
+      case "ONE":
+        aRound = [$(this).parent().index()];
+        ONE();
+        break;
+      case "TEAM":
+        aRound = [$(this).parent().index()];
+        TEAM();
+        break;
+      case "DEVICES":
+        aRound = [$(this).parent().index()];
+        DEVICES();
+        break;
+      case "ONE_ALL":
+        aRound = [];
+        $("input[type=checkbox]:not(.c_all)", $dialog).each(function(ix){
+          if(this.checked)
+            aRound.push(ix);
+        });
+        if(aRound.length)
+          ONE_ALL();
+        else
+          alert_msg(_("Choice")+"?");
+        break;
+      case "TEAM_ALL":
+        aRound = [];
+        $("input[type=checkbox]:not(.c_all)", $dialog).each(function(ix){
+          if(this.checked)
+            aRound.push(ix);
+        });
+        if(aRound.length)
+          TEAM_ALL();
+        else
+          alert_msg(_("Choice")+"?");
+        break;
+      default:
+        console.log(choice, Round);
+    }
+    $dialog.dialog("close");
+  });
+  $.post("/dir", {path: AccessDir + "extra/" + Dir}, function(D){
+    D = D.split("\n");
+    var Opt = [
+      '<option value="" class="ui-state-disabled">'+_("Extra")+'</option>'
+    ];
+    for(var i in D)
+      Opt.push('<option value="'+D[i]+'">'+D[i].replace(/[.]htm/, "")+'</option>');
+    $("select.c_extra", $dialog)
+    .html(Opt.join(""))
+    .selectmenu({
+      select: function(ev, ui){
+        if(ui.item.value == "")
+          return false;
+        $dialog.dialog("close");
+        $.post("extra/"+Dir+"/"+ui.item.value, function(D){
+          D = $(D).filter(".template");
+          var A = [];
+          if(Dir == "one"){ // ONE .................................
+            // valid  & not valid
+            for(v = 0;v < 2;v++){
+              oClass.CalcAll(oC, aA, aRound, v ? "-" : "x")
+              for(var i in aA){
+                if(typeof aA[i].SS == "undefined" || aA[i].SS == "")
+                  break;
+                var T    = $(D).filter(".html").clone(),
+                    oA   = aA[i],
+                    Rang = v ? "-" : (aA[i].Rang+"."),
+                    Sum  = $.sprintf("%.3f", aA[i].SS);
+                $("[data-replace]", T).each(function(){
+                  var r = eval($(this).data("replace")),
+                      e = $.extend({}, $(this));
+                  $(this).text(r);
+                  A.push(T);
+                });
+              }
+            }
+          } else if(Dir == "team") { // TEAM .......................
+            for(var t in aT){
+              if(aT[t].SS == 0)
+                continue;
+              var T = $(D).filter(".html").clone();
+              $("[data-replace]", T).each(function(){
+                var r = eval($(this).data("replace")),
+                    e = $.extend({}, $(this));
+                $(this).text(r);
+                A.push(T);
+              });
+            }
+          } else if(Dir == "devices") { // DEVICES .................
+            // goup  of  devices
+            var iR = aRound[0];
+            for(var gr in aG){
+              // devices
+              var sDevices = [],
+                  Summe    = aG[gr][1],
+                  Rang     =  aG[gr][2];
+              for(var gi in oC.aGR[iR][gr]){
+                var g = oC.aGR[iR][gr][gi];
+                sDevices.push(oC.val[iR].A[g].g);
+              }
+              sDevices = sDevices.join(" + ");
+              // loop for competitors
+              for(i in aG[gr]){
+                var oA   = aA[aG[gr][i][0]],
+                    Sum  = aG[gr][i][1],
+                    Rang = aG[gr][i][2];
+                if(Sum == 0.0)
+                  break;
+                var T = $(D).filter(".html").clone();
+                $("[data-replace]", T).each(function(){
+                  var r = eval($(this).data("replace")),
+                      e = $.extend({}, $(this));
+                  $(this).text(r);
+                  A.push(T);
+                });
+              }
+            }
+          }
+          if(Win && !Win.closed)
+            Win.close();
+          Win = window.open(
+            "dummy.htm",
+            ui.item.value,
+            'scrollbars=yes,toolbar=no,width=950,height=700,resizable=yes'
+          );
+          Win.focus();
+          Win.onload = function(){
+            $(Win.document.body)
+            .html($(D).filter(".css"))
+            .append(A);
+            if(oReport.lang != "en-en")
+              $(".c_float", Win.document.body).each(function(){
+                var text = $(this).html();
+                $(this).html(text.replace(/[.]/g, ","));
+              });
+          };
+        }, "text");
+      }
+    })
+    .selectmenu("menuWidget")
+    .addClass("overflow");
+  }, "html");
+}
+// -----------------------------------------------------------------
+function alert_msg(msg, title, callBack){
+  var $dialog = $("<div>")
+  .html('<p>'+msg+'</p>')
+  .dialog({
+    resizable: false,
+    height:   "auto",
+    width:    "auto",
+    title:    title ? title : _("Message"),
+    modal:    true,
+    buttons:  [{
+      text: _("Cancel"),
+      click: function(ev){
+        $(this).dialog("close");
+      }
+    }],
+    close: function(){
+      //$("body").css("overflow", "auto");
+      $(this).dialog("destroy");
+      if(callBack)
+        callBack();
+    }
+  });
+}
+// -----------------------------------------------------------------
+/*
+function save(){
+  var val    = "",
+      iRound = aRound[0];
+  switch(oReport.type){
+    case "ONE":
+      val = oC.val[iRound].name+' - '+oC.name + " - " + _("Single");
+      break;
+    case "ONE_ALL":
+      var sRound = [];
+      for(var i in aRound){
+        sRound.push(oC.val[aRound[i]].name);
+      }
+      val = sRound.join(" + ")+' - '+oC.name + " - " + _("Single");
+      break;
+    case "TEAM":
+      val = oC.val[iRound].name+' - '+oC.name + " - " + _("Team");
+      break;
+    case "DEVICES":
+      val = _("Finale") + " - " + oC.name;
+      break;
+    case "TEAM_ALL":
+      var sRound = [];
+      for(var i in aRound){
+        sRound.push(oC.val[aRound[i]].name);
+      }
+      val = sRound.join(" + ")+' - '+oC.name + " - " + _("Team");
+      break;
+  }
+  var $dialog = $("<div>")
+  .html(
+    '<input type="text" value="'+val+'" style="width:50em" class="ui-widget-content ui-corner-all">'
+  )
+  .dialog({
+    resizable: false,
+    height:   "auto",
+    width:    "auto",
+    title:    _("Save as"),
+    modal:    true,
+    buttons:  [{
+      text: _("Cancel"),
+      click: function(ev){
+        $(this).dialog("close");
+      }
+    },{
+      text: _("OK"),
+      click: function(ev){
+        var name = $("input", $dialog).val(),
+            val  = ''+
+              '<div id="cnt">'+
+              $("#cnt").html()+
+              '</div>';
+        var o = {
+          base: SQL_COMP_BASE + CompBase,
+          cmd:  [{
+            sgn:   "WINNER",
+            query: "INSERT INTO list (name,val) VALUES(?,?)",
+            para: [name, val]
+          }]
+        };
+        o.cmd = JSON.stringify(o.cmd);
+        $.post("/sql", o, function(D){
+          console.log(D);
+        }, "json");
+        $(this).dialog("close");
+      }
+    }],
+    open: function(){
+    },
+    close: function(){
+      $(this).dialog("destroy");
+    }
+  });
+}
+*/
+// -----------------------------------------------------------------
+</script>
+<body onload="load()" id="id_list">
+  <div id="cnt"></div>
+  <button data-choice="MENU" class="lang-title menu" title="Menu">
+    <i class="fa fa-bars"></i>
+  </button>
+</body>
+</html>

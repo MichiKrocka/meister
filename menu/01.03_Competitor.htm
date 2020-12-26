@@ -1,0 +1,593 @@
+<style type="text/css">
+<!--
+#id_Competitor {
+  width:100%;
+  height:auto;
+  overflow:auto;
+}
+#id_Competitor .mk-content-right,
+#id_Competitor .mk-search,
+#id_Competitor .mk-header {
+  border:0;
+}
+.ui-autocomplete {
+  max-height: 70px;
+  height: 70px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: absolute;
+  cursor: default;
+  z-index:1000 !important;
+}
+-->
+</style>
+<script language="JavaScript" type="text/javascript">
+// #####################################################################
+jQuery(function($){
+  // -------------------------------------------------------------------
+  var $T,
+      slfMenuFile = oUser.menu;
+  // -------------------------------------------------------------------
+  make();
+  // -------------------------------------------------------------------
+  // event handler for menu changed
+  function selectMenu(ui){
+    var oldMenuFile  = $(ui.oldMenu).data("menu"),
+        newMenuFile  = $(ui.newMenu).data("menu");
+
+    if(DEBUG > 0 && newMenuFile != slfMenuFile){
+      saveOption();
+      div_menu = $("#id_Content>div").filter('[data-menu="'+oldMenuFile+'"]');
+      $.Topic("selectMenu").unsubscribe(selectMenu);
+      $.Topic("logout").unsubscribe(saveOption);
+      $T.tables("destroy");
+      div_menu.detach();
+      return
+    }
+
+    if(newMenuFile == slfMenuFile){
+      $.Topic("logout").subscribe(saveOption);
+      if(typeof $T != "undefined")
+        $T
+        .tables("refresh")
+        .focus();
+    } else if(oldMenuFile == slfMenuFile){
+      saveOption();
+      $.Topic("logout").unsubscribe(saveOption);
+    }
+  }
+  // -------------------------------------------------------------------
+  // save options of table grid
+  function saveOption(){
+    $T.tables("saveOption");
+  }
+  // -------------------------------------------------------------------
+  // make table grid and form
+  function make(){
+    // subscribe events
+    $.Topic("selectMenu").subscribe(selectMenu);
+    $.Topic("logout").subscribe(saveOption);
+    // table  grid
+    $T = $("#id_Competitor").tables({
+      colModel: [{
+        indx:   "valid",
+        title:  "Valid",
+        show:   true,
+        search: true,
+        align:  "center",
+        width:  "4em"
+      },{
+        indx:   "nr",
+        title:  "Number",
+        show:   true,
+        search: true,
+        align:  "center",
+        width:  "4em"
+      },{
+        indx:   "squad",
+        title:  "Squad",
+        show:   true,
+        search: true,
+        align:  "center",
+        width:  "4em"
+      },{
+        indx:   "strftime('%%Y',birthday)",
+        title:  "Year",
+        show:   true,
+        search: true,
+        align:  "center",
+        width:  "3.5em"
+      },{
+        indx:   "CASE WHEN surename<>'' THEN surename||' ' ELSE '' END||forename",
+        title:  "Name",
+        show:   true,
+        search: true,
+        align:  "left",
+        width:  "15em"
+      },{
+        indx:   "(SELECT sex||' '||name FROM class WHERE class.id=competitor.class_id)",
+        title:  "Class",
+        show:   true,
+        search: true,
+        align:  "left",
+        width:  "12em"
+      },{
+        indx:   "club",
+        title:  "Club",
+        show:   true,
+        search:  true,
+        align:  "left",
+        width:  "12em"
+      },{
+        indx:   "(SELECT name FROM team WHERE team.id=competitor.team_id)",
+        title:  "Team",
+        show:   true,
+        search:  true,
+        align:  "left",
+        width:  "12em"
+      }],
+      dataModel:   $.extend(true, {}, sqliteDataModel),
+      accessModel: oAccess[slfMenuFile],
+      alignTitle:  "center",
+      Rows:      10,
+      Left:      5,
+      Header:    null,
+      Footer:    null,
+      Icons:
+        '<button data-choice="TEAM">'+_("Team")+'&hellip;</button>'+
+        '<button data-choice="MASTER" class="choice">'+_("Master data")+'</button>',
+      ID:        "id",
+
+      User:         oUser.dbuser,    // dbuser
+      Sign:         SIGN_COMPETITOR, // navig identification
+
+      SQL_SysBase:  SQL_SYS_BASE,
+      SQL_SysTable: SQL_SYS_TABLE,
+      SQL_Base:     SQL_COMP_BASE + CompBase,
+      SQL_Table:    "competitor",
+      SQL_Query:
+        "SELECT *,"+
+          "(SELECT name FROM team WHERE team.id=competitor.team_id) AS team,"+
+          "(SELECT sex||' '||name FROM class WHERE class.id=competitor.class_id) AS  class "+
+        "FROM competitor",
+      // functions + events
+      i18n:         _,
+      beforeEdit: function(ev, ui){
+        $("button", ui.form).button("enable");
+      },
+      closeEdit: function(ev, ui){
+        $("button", ui.form).button("disable");
+      },
+      build: goTo,
+      clickButton: function(ev, ui){
+        switch(ui.choice){
+          case "TEAM":
+            GOTO_TEAM_FILT = 'id="'+$("input[name=team_id]", $T).val()+'"';
+            $("#id_Menu")
+            .tree("open", $("input[data-menu='01.04_Team.htm']", "#id_Menu"));
+            break;
+          case "MASTER":
+            menu_master(ui);
+            break;
+          default:
+            console.log(ui.choice);
+            break;
+        }
+      },
+      autoOpt:   {
+        source: function(request, response){
+          var q = this.element[0].name,
+            Q =  {
+            "surename": "SELECT forename,surename AS value,birthday,(SELECT club FROM club WHERE club.id=cid) AS club, CASE WHEN surename<>'' THEN surename||' ' ELSE '' END||forename AS label FROM athlete WHERE forename||surename LIKE('%' || ? || '%')",
+            "club":     "SELECT club AS value FROM club WHERE club LIKE('%' || ? || '%')",
+            "team":     "SELECT id AS team_id,squad,name AS value, name||' / '||(SELECT name FROM class WHERE class_id=class.id) AS label FROM team WHERE name LIKE('%' || ? || '%') GROUP BY label",
+            "class":    "SELECT id AS class_id,val,sex||' '||name AS label FROM class WHERE name LIKE('%' || ? || '%') GROUP BY name",
+          };
+          var o = {
+            base:
+              (q == "surename" || q == "club") ?
+              SQL_BASE_DIR + "m4_athlete.sqlite" :
+              SQL_COMP_BASE + CompBase,
+            cmd:  [{
+              sgn:   "AUTO",
+              query: Q[q],
+              para: [request.term]
+            }]
+          };
+          o.cmd = JSON.stringify(o.cmd);
+          $.post("/sql", o, function(D){
+            // squad
+            if(D.AUTO.length)
+              response(D.AUTO);
+            else
+              response([]);
+          });
+        },
+        select: function(ev, ui){
+          var q = this.name;
+          switch(q){
+            case "surename":
+              this.form.forename.value = ui.item.forename;
+              this.form.birthday.value = ui.item.birthday;
+              this.form.club.value     = ui.item.club;
+              break;
+            case "team":
+              this.form.team_id.value = ui.item.team_id;
+              this.form.squad.value = ui.item.squad;
+              break;
+            case "class":
+              this.form.class_id.value = ui.item.class_id;
+              var oC = ui.item.val,
+                  aA = [];
+              if(oC != null && oC != ""){
+                if(this.form.val.value != "")
+                  var aB = $.parseJSON(this.form.val.value);
+                else
+                  var aB = false;
+                oC = $.parseJSON(oC);
+                aA = oClass.DefaultVal(oC, aB);
+              }
+              this.form.val.value = JSON.stringify(aA);
+              break;
+          }
+        }
+      }
+    });
+    setTimeout(function(){
+      $T.focus();
+    }, 1000);
+  }
+  // -------------------------------------------------------------------
+  function goTo(){
+    change_all_lang($T);
+    if(GOTO_MEMBER_FILT !== null){
+      setTimeout(function(){
+        $T.tables("option", {
+          filt: GOTO_MEMBER_FILT,
+          filtSw: true
+        });
+        $T
+        .tables("refresh")
+        .focus();
+        GOTO_MEMBER_FILT = null;
+      }, 100);
+    } else
+      setTimeout(function(){
+        $T.focus();
+      }, 500);
+  }
+  // -------------------------------------------------------------------
+  function menu_master(ui){
+    var self  = ui.element,
+        el    = ui.button,
+        $menu = $('ul.mk-tables-menu', self.element),
+        li = [
+          '<li data-choice="CANCEL"><div>'+_("Cancel")+'</div></li>',
+          '<li class=""></li>',
+          '<li data-choice="REFRESH"><div>'+_("Refresh")+'</div></li>',
+          '<li data-choice="EDIT"><div>'+_("Edit")+'</div></li>',
+        ];
+    self._overlay(true);
+    $menu
+    .html(li.join(""))
+    .show()
+    .position({
+      my: "left top",
+      at: "left bottom",
+      collision: "flip",
+      of: el
+    })
+    .menu({
+      select: function(ev, uis){
+        var c = $(uis.item).data("choice");
+        switch(c){
+          case "CANCEL":
+            break;
+          case "REFRESH":
+            master(ui);
+            break;
+          case "EDIT":
+            goto_athlete(ui);
+            break;
+        }
+        $(this).menu("option", "close")();
+      },
+      close: function(){
+        $menu
+        .off()
+        .menu("destroy")
+        .hide();
+        self._overlay(false);
+        self.element.focus();
+      }
+    })
+    .focus()
+    .on("keydown", function(ev){
+      if(ev.which == $.ui.keyCode.ESCAPE){
+        $menu.menu("option", "close")();
+      }
+      ev.preventDefault();
+      return false;
+    });
+    $($menu).on("mousewheel",  wheel);
+    $("ul", $menu).on("mousewheel",  wheel);
+    // mousewheel
+    function wheel(ev){
+      var dY = ev.originalEvent.deltaY;
+      $(this).scrollTop($(this).scrollTop() + 4 * dY);
+      return false;
+    }
+  }
+  // -------------------------------------------------------------------
+  function master(ui){
+    var $dialog = $("<div><p>Warten</p></div>")
+    .dialog({
+      modal: true,
+      height:   "auto",
+      width:    "20em",
+      title:    _("Club"),
+      close: function(ev, ui){
+      },
+    });
+    var o = {
+      base: SQL_COMP_BASE + CompBase,
+      cmd:  [{
+        sgn:   "CLUB",
+        query: "SELECT club FROM competitor GROUP  BY club",
+        para: []
+      }]
+    },
+    r = /TSV |KTV |SV |ATS |MT V|TG |TV |ESV |MTV |TB | e\.V\.| e\. V\.| v\.|Turnerschaft /gi,
+    club,
+    comp;
+    start_update_club();
+    // .................................................................
+    function start_update_club(){
+      o.cmd = JSON.stringify(o.cmd);
+      $.post("/sql", o, function(D){
+        club = D.CLUB;
+        update_club(0);
+        // .............................................................
+        function update_club(i){
+          i = parseInt(i);
+          if(i >= club.length){
+            start_update_athlete();
+            return;
+          }
+          $dialog.dialog(
+            "option",
+            "title",
+            _("Club") + " " + (i+1) + " / " +club.length
+          );
+          $("p", $dialog).text(club[i].club);
+          o = {
+            base: SQL_BASE_DIR +  "m4_athlete.sqlite",
+            cmd:  [{
+              sgn:   "CLUB",
+              query: "SELECT id FROM club WHERE club LIKE '%'||?||'%'",
+              para: [
+                club[i].club
+                .replace(r, "")
+                .replace(/[0-9]/g, " ")
+                .trim()
+              ]
+            }]
+          };
+          o.cmd = JSON.stringify(o.cmd);
+          $.post("/sql", o, function(D, status){
+            D = D.CLUB;
+            if(D.length == 0){
+              o = {
+                base: SQL_BASE_DIR +  "m4_athlete.sqlite",
+                cmd:  [{
+                  sgn:   "CLUB_INS",
+                  query: "INSERT INTO club (club) VALUES(?)",
+                  para: [club[i].club.trim()]
+                }]
+              };
+              o.cmd = JSON.stringify(o.cmd);
+              $.post("/sql", o, function(D){
+                if(typeof D.CLUB_INS == "undefined")
+                  console.error("INS", club[i].club.trim(), D.err);
+                update_club(i + 1);
+              });
+            } else {
+              club[i].cid = D[0].id;
+              update_club(i + 1);
+            }
+          });
+        }
+      });
+    }
+    // .................................................................
+    function start_update_athlete(){
+      var club_id = {};
+      for(var i in club)
+        club_id[club[i].club] = club[i].cid;
+      o = {
+        base: SQL_COMP_BASE + CompBase,
+        cmd:  [{
+          sgn:   "COMP",
+          query: "SELECT forename,surename,birthday,club FROM competitor",
+          para: []
+        }]
+      };
+      o.cmd = JSON.stringify(o.cmd);
+      $.post("/sql", o, function(D){
+        comp = D.COMP;
+        update_athlete(0);
+        // .............................................................
+        function update_athlete(i){
+          if(i >= comp.length){
+            $dialog
+            .dialog("close")
+            .dialog("destroy");
+            return;
+          }
+          $dialog.dialog(
+            "option",
+            "title",
+            _("Competitor") + " " + (i+1) + " / " +comp.length
+          );
+          $("p", $dialog).text(comp[i].surename+" "+comp[i].forename);
+          o = {
+            base: SQL_BASE_DIR +  "m4_athlete.sqlite",
+            cmd:  [{
+              sgn: "ATHLETE",
+              query:
+                "SELECT id,forename,surename,birthday,cid "+
+                "FROM athlete "+
+                "WHERE forename=? AND surename=?",
+              para: [comp[i].forename, comp[i].surename]
+            }]
+          };
+          o.cmd = JSON.stringify(o.cmd);
+          $.post("/sql", o, function(D){
+            D = D.ATHLETE;
+            if(D.length == 1){ // birthday
+              if(
+                D[0].birthday == comp[i].birthday &&
+                D[0].cid == club_id[comp[i].club]
+              ){
+                update_athlete(i + 1);
+                return;
+              }
+              o = {
+                base: SQL_BASE_DIR +  "m4_athlete.sqlite",
+                cmd:  [{
+                  sgn:   "ATHLETE_UPD",
+                  query: "UPDATE athlete SET birthday=?,cid=? WHERE id=?",
+                  para: [
+                    comp[i].birthday.match(/[0-9]{4}-01-01/g) ?
+                      D[0].birthday :
+                      comp[i].birthday,
+                    club_id[comp[i].club],
+                    D[0].id
+                  ],
+                }]
+              };
+              o.cmd = JSON.stringify(o.cmd);
+              $.post("/sql", o, function(D){
+                console.log(D,
+                  "UPDATE", D.ATHLETE_UPD.changes, "->",
+                  comp[i].birthday, club_id[comp[i].club]
+                );
+                update_athlete(i + 1);
+              });
+            } else if(D.length) { // duplicate
+              console.error("DUPLICATE", D[0]);
+              update_athlete(i + 1);
+            } else {  // insert new
+              o = {
+                base: SQL_BASE_DIR +  "m4_athlete.sqlite",
+                cmd:  [{
+                  sgn:   "ATHLETE_INS",
+                  query:
+                    "INSERT INTO athlete "+
+                    "(forename,surename,birthday,cid) "+
+                    "VALUES (?,?,?,?)",
+                  para: [
+                    comp[i].forename,
+                    comp[i].surename,
+                    comp[i].birthday,
+                    club_id[comp[i].club]
+                  ],
+                }]
+              };
+              o.cmd = JSON.stringify(o.cmd);
+              $.post("/sql", o, function(D){
+                console.log(D,
+                  "INSERT", D.ATHLETE_INS.lastID, "->",
+                  comp[i].surename, comp[i].forename,
+                  comp[i].birthday
+                );
+                update_athlete(i + 1);
+              });
+            }
+          });
+        }
+      });
+    }
+  }
+  // -------------------------------------------------------------------
+  function goto_athlete(ui){
+    GOTO_ATHLETE_FILT = $.sprintf(
+      'surename="%s" AND forename="%s"',
+      ui.data[0].surename,
+      ui.data[0].forename
+    );
+    $("#id_Menu")
+    .tree("open", $("input[data-menu='03_Athlete.htm']", "#id_Menu"));
+  }
+  // -------------------------------------------------------------------
+});
+</script>
+<div id="id_Competitor" tabindex="1">
+  <form id="id_Competitor_Form" style="display:block" class="mk-tables-form">
+    <input type="submit" tabindex="-1" style="position:absolute; top:-1000px;display:none">
+    <table id="id_Competitor_Table" tabindex="2" class="ui-corner-all">
+      <tbody>
+        <tr>
+          <td class="ui-widget-header lang" style="width:1%">Surename</td>
+          <td class="ui-widget-content" style="width:50%">
+            <input type="hidden" name="class_id" value="0" class="upd">
+            <input type="hidden" name="team_id" value="0" class="upd">
+            <input type="hidden" name="val" class="upd">
+            <input type="text" name="surename" class="upd autocomplete">
+          </td>
+          <td class="ui-widget-header lang" style="width:1%">Valid</td>
+          <td class="ui-widget-content" style="width:1%">
+            <input data-enum='["x","-"]' type="button" name="valid" class="enum upd" style="background-color:transparent;width:3em">
+          </td>
+          <td class="ui-widget-header"></td>
+          <td class="ui-widget-content" style="width:1%">
+            <input type="text" name="id" style="width:4em;text-align:center" disabled>
+          </td>
+        </tr>
+        <tr>
+          <td class="ui-widget-header lang">Forename</td>
+          <td class="ui-widget-content">
+            <input type="text" name="forename" class="upd">
+          </td>
+          <td class="ui-widget-header lang">Number</td>
+          <td class="ui-widget-content">
+            <input type="text" name="nr" class="upd" style="text-align:right">
+          </td>
+          <td class="ui-widget-header" colspan="2"></td>
+        </tr>
+        <tr>
+          <td class="ui-widget-header lang">Birthday</td>
+          <td class="ui-widget-content">
+            <input type="text" name="birthday" class="datepicker fix upd">
+          </td>
+          <td class="ui-widget-header lang">Squad</td>
+          <td class="ui-widget-content">
+            <input type="text" name="squad" class="upd" style="text-align:right">
+          </td>
+          <td class="ui-widget-header" colspan="2"></td>
+        </tr>
+        <tr>
+          <td class="ui-widget-header lang">Club</td>
+          <td class="ui-widget-content">
+            <input type="text" name="club" class="autocomplete upd">
+          </td>
+          <td class="ui-widget-header" colspan="4"></td>
+        </tr>
+        <tr>
+          <td class="ui-widget-header lang">Team</td>
+          <td class="ui-widget-content">
+            <input type="text" name="team" class="autocomplete">
+          </td>
+          <td class="ui-widget-header" colspan="4"></td>
+        </tr>
+        <tr>
+          <td class="ui-widget-header lang">Class</td>
+          <td class="ui-widget-content">
+            <input type="text" name="class" class="autocomplete">
+          </td>
+          <td class="ui-widget-header" colspan="4"></td>
+        </tr>
+      </tbody>
+    </table>
+  </form>
+</div>

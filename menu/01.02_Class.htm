@@ -1,0 +1,453 @@
+<style type="text/css">
+<!--
+#id_Class {
+  width:100%;
+  height:auto;
+  overflow:auto;
+}
+#id_Class .mk-content-right,
+#id_Class .mk-search,
+#id_Class .mk-header {
+  border:0;
+}
+table.c_class_options {
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  border-collapse:separate;
+  border-spacing:1px;
+  border:0;
+  width:100%;
+}
+table.c_class_options td {
+  white-space:nowrap;
+  font-weight:normal;
+  wwidth:1%;
+}
+table.c_class_options button,
+table.c_class_options input {
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  width:100%;
+  background:transparent;
+}
+table.c_class_options select:focus,
+table.c_class_options input:focus,
+table.c_class_options textarea:focus {
+  background-color:#CCFFFF;
+}
+-->
+</style>
+<script language="JavaScript" type="text/javascript">
+// #####################################################################
+jQuery(function($){
+  // -------------------------------------------------------------------
+  var $T,
+      slfMenuFile = oUser.menu;
+  // -------------------------------------------------------------------
+  make();
+  // -------------------------------------------------------------------
+  // event handler for menu changed
+  function selectMenu(ui){
+    var oldMenuFile  = $(ui.oldMenu).data("menu"),
+        newMenuFile  = $(ui.newMenu).data("menu");
+
+    if(DEBUG > 0 && newMenuFile != slfMenuFile){
+      saveOption();
+      div_menu = $("#id_Content>div").filter('[data-menu="'+oldMenuFile+'"]');
+      $.Topic("selectMenu").unsubscribe(selectMenu);
+      $.Topic("logout").unsubscribe(saveOption);
+      $T.tables("destroy");
+      div_menu.detach();
+      return
+    }
+
+    if(newMenuFile == slfMenuFile){
+      $.Topic("logout").subscribe(saveOption);
+      if(typeof $T != "undefined")
+        $T
+        .tables("refresh")
+        .focus();
+    } else if(oldMenuFile == slfMenuFile){
+      saveOption();
+      $.Topic("logout").unsubscribe(saveOption);
+    }
+  }
+  // -------------------------------------------------------------------
+  // save options of table grid
+  function saveOption(){
+    $T.tables("saveOption");
+  }
+  // -------------------------------------------------------------------
+  // make table grid and form
+  function make(){
+    // subscribe events
+    $.Topic("selectMenu").subscribe(selectMenu);
+    $.Topic("logout").subscribe(saveOption);
+    // table  grid
+    $T = $("#id_Class").tables({
+      colModel: [{
+        indx:   "sex",
+        title:  "Sex",
+        show:   true,
+        search: true,
+        align:  "center",
+        width:  "3em"
+      },{
+        indx:   "r",
+        title:  "Round",
+        show:   true,
+        search: true,
+        align:  "center",
+        width:  "4em"
+      },{
+        indx:   "name",
+        title:  "Class",
+        show:   true,
+        search: true,
+        align:  "left",
+        width:  "30em"
+      },{
+        indx:   "type",
+        title:  "Type",
+        show:   true,
+        search: true,
+        align:  "left",
+        width:  "15em"
+      }],
+      dataModel:   $.extend(true, {}, sqliteDataModel),
+      accessModel: oAccess[slfMenuFile],
+      alignTitle:  "center",
+      Rows:      10,
+      Left:      2,
+      Header:    null,
+      Footer:    null,
+      ID:        "id",
+
+      User:         oUser.dbuser, // dbuser
+      Sign:         SIGN_CLASS,  // navig identification
+
+      SQL_SysBase:  SQL_SYS_BASE,
+      SQL_SysTable: SQL_SYS_TABLE,
+      SQL_Base:     SQL_COMP_BASE + CompBase,
+      SQL_Table:    "class",
+      SQL_Query:    "SELECT * FROM class",
+      // functions + events
+      i18n:         _,
+      beforeEdit: function(ev, ui){
+        $("button", ui.form).button("enable");
+      },
+      closeEdit: function(ev, ui){
+        $("button", ui.form).button("disable");
+      },
+      beforeChanged: function(ev, ui, callBack){
+        if(callBack)
+          callBack();
+      },
+      dataChanged: function(ev, ui){
+      },
+//      refreshRec: refreshRec,
+      clickButton: function(ev, ui){
+        if(ui.choice == "OPTIONS")
+          options(ui);
+      },
+      build: function(ev, ui){
+        change_all_lang(this);
+        var self = this;
+        setTimeout(function(){
+          self.focus();
+        }, 500);
+      },
+      autoOpt:   {
+        source: function(request, response){
+          var value = Object.keys(oClass.DefaultOpt),
+              reg   = new RegExp(".*"+request.term+".*", "gi");
+          response(value.filter(function(v, i, a){
+            var r = true;
+            try{
+              r = reg.test(v);
+            } catch(err){
+              ;
+            }
+            return r;
+          }));
+        },
+        select:  function(ev, ui){
+          var Val = JSON.stringify(oClass.DefaultOpt[ui.item.value]);
+          $("input[name=val]", "#id_Class_Table").val(Val);
+        }
+      }
+    });
+  }
+  // -------------------------------------------------------------------
+  //  options editor
+  function options(ui){
+    var aO = $("input[name=val]", "#id_Class_Table").val();
+    if(aO == "")
+      aO = [];
+    else {
+      aO = $.parseJSON(aO);
+// !!!!!!!!!!!
+      if(typeof aO.rounds != "undefined")
+        aO = aO.rounds;
+    }
+    // round tables
+    var html = "";
+    for(var i in aO)
+      html += make_round_table(i, aO[i]);
+    // dialog
+    var $dialog = $('<div>')
+    .html(html)
+    .dialog({
+      resizable: false,
+      height:   "500",
+      width:    "95%",
+      title:    _("Options"),
+      modal:    true,
+      buttons:  [{
+        text: _("Add round"),
+        click: function(){
+          var o;
+          for(var x in oClass.DefaultOpt){
+            o = oClass.DefaultOpt[x];
+            break;
+          }
+          var tab = make_round_table($("table", this).length, o[0]);
+          $("button", "#id_Class_Dialog").button("destroy");
+          $dialog.append(tab);
+          make_round_button();
+        }
+      },{
+        text: _("OK"),
+        class: "c_OK",
+        click: function(){
+          var aO1 = [];
+          $("table", this).each(function(itab){
+            aO1[itab] = {};
+            $("tr", this).each(function(itr){
+              var prop = $(this).data("prop");
+              if(typeof prop == "undefined"){
+                return;
+              }
+              if(prop == "name"){
+                aO1[itab].name = $("input[name=name]", this).val();
+                return;
+              }
+              if(typeof aO1[itab].A == "undefined")
+                aO1[itab].A = [];
+              $("td", this).filter(":not(:first-child)").each(function(itd){
+                var val = $("input[type=text]", this).val();
+                if(typeof aO1[itab].A[itd] == "undefined")
+                  aO1[itab].A[itd] = {};
+                aO1[itab].A[itd][prop] = val;
+              });
+            });
+          });
+          $("input[name=val]", "#id_Class_Table").val(JSON.stringify(aO1));
+          $(this).dialog("close")
+        }
+      },{
+        text: _("Cancel"),
+        click: function(){
+          $(this).dialog("close")
+        }
+      }],
+      close: function(){
+        $(this).dialog("destroy");
+      }
+    }).on("keydown", function(ev){
+      if(ev.keyCode == $.ui.keyCode.ENTER && ev.ctrlKey){
+        var OK = $("button.c_OK", $(this).dialog("widget"));
+        OK.click();
+        return false;
+      }
+    });
+    // .................................................................
+    make_round_button();
+    // .................................................................
+    $("input[type=text]", $dialog)
+    .filter(":enabled")
+    .filter(":visible")
+    .first()
+    .focus();
+    // .................................................................
+    // make one round
+    function make_round_table(i, aO1){
+      var J = aO1.A.length,
+          d = [],
+          g = [],
+          r = [],
+          v = [];
+      i = parseInt(i);
+      for(var j = 0;j < J;j++){
+        g.push('<td><input type="text" value="'+aO1.A[j].g+'" class="ui-widget-content"></td>');
+        r.push('<td><input type="text" value="'+aO1.A[j].r+'" class="ui-widget-content"></td>');
+        v.push('<td><input type="text" value="'+aO1.A[j].v+'" class="ui-widget-content"></td>');
+        d.push('<td><button class="lang-title" title="Remove">'+(j+1)+'</button></td>');
+      }
+      return ''+
+        '<table class="c_class_options">'+
+          '<tbody>'+
+            '<tr data-prop="name">'+
+              '<td colspan="2">'+
+                '<input type="text" value="'+aO1.name+'" name="name" class="ui-widget-content">'+
+              '</td>'+
+            '</tr>'+
+            '<tr style="font-size:0.8em">'+
+              '<td>'+
+                '<button data-choice="RUNDE-" title="Remove" class="lang-title">Runde '+(i+1)+'</button>'+
+              '</td>'+
+              d.join("")+
+              '<td style="width:3em">'+
+                '<button data-choice="EQUIPMENT+" title="Add equipment" class="lang-title plus">&plus;</button></td>'+
+            '</tr>'+
+            '<tr data-prop="g">'+
+              '<td>'+_("Device")+'</td>'+
+              g.join("")+
+            '</tr>'+
+            '<tr data-prop="r">'+
+              '<td>'+_("Roll")+'</td>'+
+              r.join("")+
+            '</tr>'+
+            '<tr data-prop="v">'+
+              '<td>'+_("Weighting")+'</td>'+
+              v.join("")+
+            '</tr>'+
+          '</tbody>'+
+        '</table>';
+    }
+    // .................................................................
+    // make buttons
+    function make_round_button(){
+      $("button", $dialog)
+      .button()
+      .click(function(ev){
+        button_click(this);
+      });
+      change_all_lang($dialog);
+    }
+    // .................................................................
+    // button event
+    function  button_click(self){
+      var choice = $(self).data("choice"),
+          tr     = $(self).closest("tr"),
+          geret  = $(self).closest("td").index(),
+          table  = $(self).closest("table"),
+          rounds  = table.index();
+      switch(choice){
+        case "RUNDE-":
+          $(table).remove();
+          $("table", "#id_Class_Dialog").each(function(ix){
+            $("td button", this)
+            .first()
+            .button("option", "label", _("Round") + " " + (ix + 1));
+          });
+          break;
+        case "EQUIPMENT+":
+          $(table).find('tr').each(function(){
+            var prop = $(this).data("prop"),
+                v = "";
+            switch(prop){
+              case "g":
+                v = "x";
+                break;
+              case "r":
+                v = geret;
+                break;
+              case "v":
+                v = 1;
+                break;
+              default:
+                $(this).find('td')
+                .eq(geret - 1)
+                .after(
+                  '<td>'+
+                    '<button class="lang-title" title="Remove">'+
+                      (geret)+
+                    '</button>'+
+                  '</td>');
+                $("button:not(.ui-button)",  table)
+                .button()
+                .click(function(ev){
+                  button_click(this);
+                });
+                return;
+            }
+            $(this).find('td')
+            .eq(geret - 1)
+            .after(
+              '<td>'+
+                '<input type="text" value="'+v+'" class="ui-widget-content">'+
+              '</td>'
+            );
+          });
+          break;
+        default:
+          $("td", table).remove(":nth-child(" + (geret + 1) + ")");
+          $("td button:not(.plus)", tr).slice(geret).each(function(ix){
+            $(this).button("option", "label", ix + geret);
+          });
+          $("input[type=text]", table).first().focus();
+      }
+      return false;
+    }
+    // .................................................................
+  }
+  // -------------------------------------------------------------------
+});
+</script>
+<div id="id_Class" tabindex="1">
+  <form id="id_Class_Form" style="display:block" class="mk-tables-form">
+    <input type="submit" tabindex="-1" style="position:absolute; top:-1000px;display:none">
+    <table id="id_Class_Table" tabindex="2" border="0">
+      <tbody>
+        <tr>
+          <td class="ui-widget-header lang" style="width:1%">Class</td>
+          <td class="ui-widget-content" style="width:50%">
+            <input type="hidden" name="val" class="upd">
+            <input type="text" name="name" class="upd">
+          </td>
+          <td class="ui-widget-header lang" style="width:1%">Sex</td>
+          <td class="ui-widget-content" style="width:1%">
+            <input data-enum='["M","F"]' type="button" name="sex" class="enum upd" style="background-color:transparent;width:3em">
+          </td>
+          <td class="ui-widget-header lang" style="width:1%">Team scores</td>
+          <td class="ui-widget-content" style="width:1%">
+            <input type="text" name="tscores" style="text-align:right;width:3em" class="upd"></td>
+          <td class="ui-widget-header"></td>
+          <td class="ui-widget-content" style="width:1%">
+            <input type="text" name="id" style="width:4em;text-align:center" disabled>
+          </td>
+        </tr>
+        <tr>
+          <td class="ui-widget-header lang">Type</td>
+          <td class="ui-widget-content">
+            <input type="text" name="type" class="upd autocomplete"></td>
+          <td class="ui-widget-header lang">Round</td>
+          <td class="ui-widget-content">
+            <input type="text" name="r" style="text-align:right" class="upd">
+          </td>
+          <td class="ui-widget-header lang">Best scores</td>
+          <td class="ui-widget-content">
+            <input type="text" name="bscores" style="text-align:right" class="upd">
+          </td>
+          <td class="ui-widget-header" colspan="2"></td>
+        </tr>
+        <tr>
+          <td class="ui-widget-header lang">Formula</td>
+          <td class="ui-widget-content">
+            <input type="text" name="formula" class="upd">
+          </td>
+          <td class="ui-widget-header" colspan="6">
+            R - <span class="lang">Rank</span>,
+            S - <span class="lang">Sum</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="float:right;padding:6px">
+      <button title="Options" data-choice="OPTIONS" class="lang lang-title" disabled>Options</button>
+    </div>
+  </form>
+</div>

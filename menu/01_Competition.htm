@@ -1,0 +1,1363 @@
+<style type="text/css">
+<!--
+#id_Competition {
+  width:100%;
+  height:auto;
+  overflow:auto;
+}
+#id_Competition .mk-content-right,
+#id_Competition .mk-search,
+#id_Competition .mk-header {
+  border:0;
+}
+#id_Competition .mk-footer {
+  border-right-width:0;
+  border-bottom-width:0;
+}
+
+#id_Competition_Scroll {
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  margin:0;
+  padding:0;
+  border:0;
+  overflow:auto;
+  overflow-x:hidden;
+  width:200px;
+  height:100px;
+  cursor: pointer;
+}
+#id_Competition_Scroll table {
+  border-collapse:collapse;
+  table-layout:fixed;
+}
+#id_Competition_Scroll table td,
+#id_Competition_Scroll table th {
+  padding:3px;
+  font-weight:normal;
+}
+#id_Competition_Scroll table td {
+  text-align:center;
+}
+#id_Competition_Scroll thead tr,
+#id_Competition_Scroll tbody tr {
+  border-left-width:0;
+  border-right-width:0;
+  border-top-width:0;
+}
+#id_Competition_Scroll tbody tr {
+  counter-increment: rowNumber;
+}
+#id_Competition_Scroll tbody tr td:first-child::before {
+  content: counter(rowNumber);
+}
+#id_Competition_Scroll table td:first-child {
+  text-align:right;
+}
+#id_Competition_Scroll table td:last-child {
+  text-align:left;
+}
+#id_Competition_Scroll table td div {
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space: nowrap;
+}
+
+.no-close .ui-dialog-titlebar-close {
+  display: none;
+}
+table.xls {
+  border-collapse:collapse;
+}
+table.xls td {
+  vertical-align:top;
+}
+
+-->
+</style>
+<script language="JavaScript" type="text/javascript">
+// #####################################################################
+var  W;
+jQuery(function($){
+  // -------------------------------------------------------------------
+  var $T,
+      TimeOut = null,
+      DataBefore,
+      slfMenuFile = oUser.menu;
+  // -------------------------------------------------------------------
+  make();
+  // -------------------------------------------------------------------
+  // event handler for menu changed
+  function selectMenu(ui){
+    var oldMenuFile  = $(ui.oldMenu).data("menu"),
+        newMenuFile  = $(ui.newMenu).data("menu");
+
+    if(DEBUG > 0 && newMenuFile != slfMenuFile){
+      saveOption();
+      div_menu = $("#id_Content>div").filter('[data-menu="'+oldMenuFile+'"]');
+      $.Topic("selectMenu").unsubscribe(selectMenu);
+      $.Topic("logout").unsubscribe(saveOption);
+      //$.Topic("resizeWindow").unsubscribe(resize);
+      $T.tables("destroy");
+      div_menu.detach();
+      return
+    }
+
+    if(newMenuFile == slfMenuFile){
+      $.Topic("logout").subscribe(saveOption);
+      //$.Topic("resizeWindow").subscribe(resize);
+      if(typeof $T != "undefined")
+        $T
+        .tables("refresh")
+        .focus();
+    } else if(oldMenuFile == slfMenuFile){
+      saveOption();
+      $.Topic("logout").unsubscribe(saveOption);
+      //$.Topic("resizeWindow").unsubscribe(resize);
+    }
+  }
+  // -------------------------------------------------------------------
+  // save options of table grid
+  function saveOption(){
+    $T.tables("saveOption");
+  }
+  // -------------------------------------------------------------------
+  // event handler for resize window
+  function resize(){
+    $("#id_Competition_Scroll").hide();
+    var div_menu = $("div[data-menu='"+slfMenuFile+"']"),
+        h0 = div_menu.height(),
+        h1 = $("#id_Competition").height(),
+        w = div_menu.width();
+    $("#id_Competition_Scroll").show();
+    $("#id_Competition_Scroll").height(h0 - h1);
+    $("#id_Competition_Scroll").width(w);
+  }
+  // -------------------------------------------------------------------
+  // make table grid and form
+  function make(){
+    // status options/select for form
+    var Status = {
+      R: _("Registration"),
+      X: _("Competition"),
+      W: _("Winners list"),
+      U: _("Running"),
+      C: _("Closed")
+    },
+    aStatus = [];
+    for(var x in Status)
+      aStatus.push($.sprintf(
+        '<option value="%s">%s-%s</option>',
+        x, x, Status[x]
+      ));
+    $("[name=s]", "#id_Competition_Table").html(aStatus.join(""));
+    // subscribe events
+    $.Topic("selectMenu").subscribe(selectMenu);
+    $.Topic("logout").subscribe(saveOption);
+    $.Topic("resizeWindow").subscribe(resize);
+    // table  grid
+    $T = $("#id_Competition").tables({
+      colModel: [{
+        indx:   "datum",
+        title:  "Datum",
+        show:   true,
+        search: true,
+        align:  "center",
+        width:  "7em"
+      },{
+        indx:   "code",
+        title:  "Code",
+        show:   true,
+        search: true,
+        align:  "left",
+        width:  "12em"
+      },{
+        indx:   "s",
+        title:  "State",
+        show:   true,
+        search: true,
+        align:  "center",
+        width:  "3.5em"
+      },{
+        indx:   "r",
+        title:  "Round",
+        show:   true,
+        search: true,
+        align:  "right",
+        width:  "3.5em"
+      },{
+        indx:   "info",
+        title:  "Info",
+        show:   true,
+        search: true,
+        align:  "left",
+        width:  "40em"
+      }],
+      filtFix:     oAccess[slfMenuFile].edt ? "" : "s IN ('X','U')",
+      dataModel:   $.extend(true, {}, sqliteDataModel),
+      accessModel: oAccess[slfMenuFile],
+      alignTitle:  "center",
+      Rows:      5,
+      Left:      2,
+      Header:    null,
+      Footer:    null,
+      Icons:     '<button data-choice="EXPORT">'+_("Export")+'</button>'+
+                 (oAccess[slfMenuFile].ins ?
+                  '<button data-choice="IMPORT">'+_("Import")+'</button>':
+                  ''),
+      ID:        "id",
+
+      User:         oUser.dbuser,     // dbuser
+      Sign:         SIGN_COMPETITION, // navig identification
+
+      SQL_SysBase:  SQL_SYS_BASE,
+      SQL_SysTable: SQL_SYS_TABLE,
+      SQL_Base:     SQL_SYS_BASE,
+      SQL_Table:    "competition",
+      SQL_Query:    "SELECT * FROM competition",
+      // functions + events
+      i18n:         _,
+      beforeEdit: function(ev, ui){
+        $("button", ui.form).button("enable");
+        $("span.c_statistic", "#id_Competition").hide();
+      },
+      closeEdit: function(ev, ui){
+        $("button", ui.form).button("disable");
+        $("span.c_statistic", "#id_Competition").show();
+      },
+      beforeChanged: function(ev, ui, callBack){
+        switch(ui.fun){
+          case "INSERT":
+            if(callBack)
+              callBack();
+            break;
+          case "DELETE":
+          case "UPDATE":
+          case "UPDATE_DO":
+            data_before(ui, callBack);
+            break;
+          default:
+            if(callBack)
+              callBack();
+        }
+      },
+      dataChanged: function(ev, ui){
+        switch(ui.fun){
+          case "INSERT":
+            insert(ui);
+            break;
+          case "DELETE":
+            del(ui);
+            break;
+          case "UPDATE":
+          case "UPDATE_DO":
+            update(ui);
+            break;
+        }
+      },
+      resize: resize,
+      refreshRec: refreshRec,
+      build: function(ev, ui){
+        change_all_lang(this);
+      },
+      clickButton: function(ev, ui){
+        // logos
+        if(ui.choice == "LOGO"){
+          logo_dialog();
+          return;
+        }
+        // parallel task
+        setTimeout(function(){
+          compExpImp(ui);
+        }, 0);
+      }
+    });
+    setTimeout(function(){
+      $T.focus();
+    }, 1000);
+    // -----------------------------------------------------------------
+    // event handler for refresh record
+    function refreshRec(ev, ui){
+      // buttons .......................................................
+      if(ui.REC.length == 0){
+        $("button.ui-widget[data-choice=EXPORT],button.ui-widget[data-choice=XLS]", "#id_Competition")
+        .button("disable");
+        $("span.c_statistic", "#id_Competition").hide();
+        $("#id_Competition_Scroll").text("");
+        oComp = {};
+        $("#id_head_info").text('');
+        CompBase = null;
+        return;
+      }
+      // info ..........................................................
+      oComp = ui.REC[0];
+      $("#id_head_info").text(oComp.info);
+      CompBase = $.sprintf("%s_%s.sqlite", oComp.datum.replace(/-/g, "_"), oComp.code);
+      $("button.ui-widget[data-choice=EXPORT],button.ui-widget[data-choice=XLS]", "#id_Competition")
+      .button("enable");
+      $("span.c_statistic", "#id_Competition").show();
+      var o = {
+        base: SQL_COMP_BASE + CompBase,
+        cmd:  [{
+          sgn:   "INFO",
+          query: "SELECT (SELECT COUNT(*) FROM class) AS n_class,(SELECT COUNT(*) FROM competitor) AS n_comp,(SELECT COUNT(*) FROM team) AS n_team",
+          para: []
+        }]
+      };
+      o.cmd = JSON.stringify(o.cmd);
+      $.post("/sql", o, function(D){
+        var INFO = D.INFO[0];
+        $("span.c_statistic", "#id_Competition").text($.sprintf(
+          "%s: %i / %s: %i / %s: %i",
+          _("Class"), INFO.n_class,
+          _("Competitor"), INFO.n_comp,
+          _("Team"), INFO.n_team
+        ));
+      });
+      // classes .......................................................
+      var o = {
+        base: SQL_COMP_BASE + CompBase,
+        cmd:  [{
+          sgn:   "CLASS",
+          query: "SELECT id,sex,name,(SELECT COUNT(*) FROM competitor WHERE class_id=class.id) AS n_comp,(SELECT COUNT(*) FROM team WHERE class_id=class.id) AS n_team FROM class ORDER BY name",
+          para: []
+        }]
+      };
+      o.cmd = JSON.stringify(o.cmd);
+      $.post("/sql", o, function(D){
+        D = D.CLASS;
+        var tr = [];
+        for(var i in D){
+          tr.push($.sprintf(
+            '<tr data-id="%i" class="ui-widget-content"><td></td><td>%s</td><td>%s</td><td>%s</td><td><div style="width:%s">%s</div></td></tr>',
+            D[i].id, D[i].sex, D[i].n_comp, D[i].n_team, "30em", D[i].name
+          ));
+        }
+        $("#id_Competition_Scroll").html($.sprintf(
+          '<table>'+
+            '<thead>'+
+              '<tr class="ui-widget-header"><th style="width:1%%">#</th><th style="width:1%%">%s</th><th style="width:1%%">%s</th><th style="width:1%%">%s</th><th>%s</th></tr>'+
+            '</thead>'+
+            '<tbody>'+
+              tr.join("")+
+            '</tbody>'+
+          '</table>',
+          _("Sex"), _("Competitor"), _("Team"), _("Class")
+        ));
+        $("table tbody td:nth-child(3)", "#id_Competition_Scroll")
+        .attr("title", _("Winners list")+" / "+_("Competitors"));
+        $("table tbody td:nth-child(4)", "#id_Competition_Scroll")
+        .attr("title", _("Winners list")+" / "+_("Team"));
+        $("table", "#id_Competition_Scroll")
+        .stickyTableHeaders({
+          scrollableArea: $("#id_Competition_Scroll")
+        });
+
+        $("table tbody tr td", "#id_Competition_Scroll")
+        .filter("td:nth-child(3),td:nth-child(4)")
+        .hover(
+          function(ev){ $(this).addClass("ui-state-focus"); },
+          function(ev){ $(this).removeClass("ui-state-focus"); }
+        )
+        .click(function(ev){
+          var id = $(this).parent().data("id"),
+              ix = $(this).index(),
+              td = $(this).text(),
+              recId = $("input[name=id]", "#id_Competition_Form").val(),
+              type = ["ONE", "TEAM"];
+          if(td == "0"){
+            $("#id_Msg").text(_("No rows to display"));
+              setTimeout(function(){
+                $("#id_Msg").text("");
+              }, 10000);
+            return;
+          }
+          $("#id_Msg").text("");
+          var report = {
+            dbuser:    oUser.dbuser,
+            type:         type[ix - 2],
+            recId:        recId,
+            class_id:     id,
+            lang:         oUser.lang,
+            DIR_LANG:     DIR_LANG,
+            SQL_BASE_DIR: SQL_BASE_DIR,
+            SQL_SYS_BASE: SQL_SYS_BASE,
+            SQL_COMP_BASE:SQL_COMP_BASE
+          };
+          W = window.open(
+            "list.htm"+window.route,
+            JSON.stringify(report), //"LIST "+recId+"/"+id,
+            'scrollbars=yes,toolbar=no,width=900,height=700,resizable=yes'
+          );
+          W.focus();
+        });
+      });
+
+    }
+  }
+  // -------------------------------------------------------------------
+  // menu choice sqlite/xls for export/import competition
+  function compExpImp(ui){
+    var self = ui.element,
+        el = ui.button,
+        li = [
+          '<li data-choice="CANCEL">'+
+            '<div>'+
+              _("Cancel")+
+            '</div>'+
+          '</li>',
+          '<li><div></div></li>',
+          '<li data-choice="SQLITE">'+
+            '<div>'+
+              "sqlite"+
+            '</div>'+
+          '</li>',
+          '<li data-choice="XLS" '+(CompBase == null ? 'class="ui-state-disabled"':'')+'>'+
+            '<div>'+
+              "xls"+
+            '</div>'+
+          '</li>'
+        ],
+        $menu = $('ul.mk-tables-menu', self.element);
+    if(!$menu.is(":hidden")){
+      $(this)
+      .menu("destroy")
+      .hide();
+      self._overlay(false);
+      self.element.focus();
+      return false;
+    }
+    self._overlay(true);
+    $menu
+    .html(li.join(""))
+    .show()
+    .position({
+      my: "left top",
+      at: "left bottom",
+      of: el
+    })
+    .menu({
+      select: function(ev, uis){
+        var c = $(uis.item).data("choice");
+        switch(c){
+          case "CANCEL":
+            break;
+          case "SQLITE":
+            if(ui.choice == "EXPORT")
+              compExpSqlite(ui);
+            else
+              compImpSqlite(ui);
+            break;
+          case "XLS":
+            if(ui.choice == "EXPORT")
+              compExpXls(ui);
+            else
+              compImpXls(ui);
+            break;
+          default:
+            console.log(c);
+        }
+        $(this).menu("option", "close")();
+      },
+      close: function(){
+        $menu
+        .off()
+        .menu("destroy")
+        .hide();
+        self._overlay(false);
+        self.element.focus();
+      }
+    })
+    .focus()
+    .on("keydown", function(ev){
+      if(ev.which == $.ui.keyCode.ESCAPE){
+        $menu.menu("option", "close")();
+      }
+      ev.preventDefault();
+      return false;
+    });
+    $($menu).on("mousewheel",  wheel);
+    $("ul", $menu).on("mousewheel",  wheel);
+    // mousewheel
+    function wheel(ev){
+      var dY = ev.originalEvent.deltaY;
+      $(this).scrollTop($(this).scrollTop() + 4 * dY);
+      return false;
+    }
+  }
+  // -------------------------------------------------------------------
+  // export competition sqlite
+  function compExpSqlite(ui){
+    var zip = new JSZip();
+    loadDataRemote("/" + SQL_COMP_BASE + CompBase, function(data){
+      zip
+      .file("base.sqlite", data, { binary: true })
+      .file("meta.json", JSON.stringify(oComp));
+      saveDataLocal(
+        zip.generate({type:"blob"}),
+        CompBase+".zip",
+        "application/zip;base64"
+      );
+    }, "application/x-sqlite3");
+  }
+  // -------------------------------------------------------------------
+  // import competition sqlite
+  function compImpSqlite(ui){
+    loadDataLocal(function(data){
+      var zip    = new JSZip(data),
+          sqlite = zip.file("base.sqlite").asBinary(),
+          meta   = $.parseJSON(zip.file("meta.json").asText()),
+          CompBaseNew;
+      aError.push(_("Wait"));
+      // save database
+      CompBaseNew = $.sprintf(
+        "%s_%s.sqlite",
+        meta.datum.replace(/-/g, "_"),
+        meta.code
+      );
+      saveDataRemote(sqlite, SQL_COMP_BASE + CompBaseNew, function(msg){
+        aError.shift();
+        aError.push("Upload "+msg.msg);
+        // check competition
+        var o = {
+          base: SQL_SYS_BASE,
+          cmd:  [{
+            sgn:   "COMPETITION",
+            query: "SELECT id FROM competition WHERE datum=? AND code=?",
+            para: [meta.datum, meta.code]
+          }]
+        };
+        o.cmd = JSON.stringify(o.cmd);
+        $.post("/sql", o, function(D){
+          // update competition
+          if(D.COMPETITION.length){
+            meta.id = D.COMPETITION[0].id;
+            o.cmd = [{
+              sgn: "COMP_CHANGE",
+              query: "UPDATE competition SET advice=?,code=?,datum=?,info=?,logo=?,r=?,s=? WHERE id=?",
+              para: [
+                meta.advice, meta.code, meta.datum,
+                meta.info, meta.logo, meta.r, meta.s,
+                meta.id
+              ]
+            }]
+          } else {
+          // insert competition
+            delete meta.id;
+            o.cmd = [{
+              sgn: "COMP_CHANGE",
+              query: "INSERT INTO competition (advice,code,datum,info,logo,r,s) VALUES(?,?,?,?,?,?,?)",
+              para: [
+                meta.advice, meta.code, meta.datum,
+                meta.info, meta.logo, meta.r, meta.s
+              ]
+            }]
+          }
+          o.cmd = JSON.stringify(o.cmd);
+          $.post("/sql", o, function(D){
+            aError.shift();
+            if(D.COMP_CHANGE.changes){
+              aError.push("UPDATE id = "+meta.id);
+            } else {
+              meta.id = D.COMP_CHANGE.lastID;
+              aError.push("INSERT id = "+D.COMP_CHANGE.lastID+" / changes = "+D.COMP_CHANGE.changes);
+            }
+            $T
+            .tables("option", {recId: meta.id})
+            .tables("refresh");
+          }, "json");
+        }, "json");
+      }, "application/x-sqlite3");
+    }, "readAsBinaryString");
+  }
+  // -------------------------------------------------------------------
+  // export competition accel sheet
+  function compExpXls(ui){
+/*
+var wb = {
+  SheetNames: ["Sheet1"],
+  Sheets: {
+    Sheet1: {
+      "!ref":"A1:C1",
+      A1: { t:"n", v:10000 },                    // <-- General format
+      B1: { t:"n", v:10000, z: "0%" },           // <-- Builtin format
+      C1: { t:"n", v:10000, z: "\"T\"\ #0.00" }  // <-- Custom format
+    }
+  }
+}*/
+    var wb = XLSX.utils.book_new(),
+        wso = {
+          bookType:'xlsx',
+          bookSST:false,
+          type:'binary'
+        },
+        ws1     = {},
+        ws2     = {},
+        iRound  = $.isNumeric(oComp.r) ? oComp.r - 1 : 0, 
+        TEAM    = [],
+        ixCLASS = {}
+        CLASS   = [];
+
+    wb.cellStyles = true;
+    // competition .....................................................
+    ws2.A1 = {t:"s", v:"Datum"};
+    ws2.B1 = {t:"s", v:oComp.datum};
+    ws2.A2 = {t:"s", v:"Code"};
+    ws2.B2 = {t:"s", v:oComp.code};
+    ws2.A3 = {t:"s", v:"Info"};
+    ws2.B3 = {t:"s", v:oComp.info};
+    ws2.A4 = {t:"s", v:"State"};
+    ws2.B4 = {t:"s", v:oComp.s};
+    ws2.A5 = {t:"s", v:"Round"};
+    ws2.B5 = {t:"s", v:oComp.r};
+    var ix = 7;
+    // teams ...........................................................
+    var o = {
+      base: SQL_COMP_BASE + CompBase,
+      cmd:  [{
+        sgn:   "TEAM",
+        query: "SELECT *,(SELECT name FROM class WHERE class.id=class_id) AS class FROM team ORDER BY squad",
+        para: []
+      }]
+    };
+    o.cmd = JSON.stringify(o.cmd);
+    $.post("/sql", o, function(D){
+      TEAM = D.TEAM;
+      for(var i in TEAM){
+        ws2["A"+ix] = {t:"s", v:TEAM[i].name};
+        ws2["B"+ix] = {t:"s", v:TEAM[i].class};
+        ws2["C"+ix] = {t:"s", v:TEAM[i].email};
+        ws2["D"+ix] = {t:"s", v:TEAM[i].squad};
+        ix++;
+      }
+      ix++;
+      Classes();
+    });
+    // classes .........................................................
+    function Classes(){
+      var o = {
+        base: SQL_COMP_BASE + CompBase,
+        cmd:  [{
+          sgn:   "CLASS",
+          query: "SELECT * FROM class ORDER BY id",
+          para: []
+        }]
+      };
+      o.cmd = JSON.stringify(o.cmd);
+      $.post("/sql", o, function(D){
+        CLASS = D.CLASS;
+        for(var i in CLASS){
+          CLASS[i].val = CLASS[i].val != "" ? $.parseJSON(CLASS[i].val) : [];
+          CLASS[i].r   = CLASS[i].r   != "" ? CLASS[i].r - 1 : iRound;
+          ixCLASS[CLASS[i].id] = i;
+          ws2["A"+ix] = {t:"s", v:CLASS[i].name};
+          ix++;
+        }
+        ix++;
+        ws2["!ref"] = "A1:Z"+ix,
+        Competitor();
+      });
+    }
+    // competitor ......................................................
+    function Competitor(){
+      var o = {
+        base: SQL_COMP_BASE + CompBase,
+        cmd:  [{
+          sgn:   "COMP",
+          query: "SELECT *,(SELECT name FROM class WHERE class.id=class_id) AS class,(SELECT name FROM team WHERE team.id=team_id) AS team FROM competitor ORDER BY class_id, team_id",
+          para: []
+        }]
+      };
+      o.cmd = JSON.stringify(o.cmd);
+      $.post("/sql", o, function(D){
+        COMP = D.COMP;
+        ix = 1;
+        ws1["A"+ix] = {t:"s", v:"Name"};
+        ws1["B"+ix] = {t:"s", v:"Vorname"};
+        ws1["C"+ix] = {t:"s", v:"Geburt"};
+        ws1["D"+ix] = {t:"s", v:"Vereinskurzname"};
+        ws1["E"+ix] = {t:"s", v:"Mannschaft"};
+        ws1["F"+ix] = {t:"s", v:"Wettkampfname"};
+        ws1["G"+ix] = {t:"s", v:"Riege"};
+        ws1["H"+ix] = {t:"s", v:"Geschlecht"};
+        ix++;
+        var Team  = COMP[0].team,
+            Class = COMP[0].class,
+            IX0   = ix + 1;
+        for(var i in COMP){                           // competitors
+          var C = CLASS[ixCLASS[COMP[i].class_id]],   // class
+              A = C.val[C.r].A,                       // devices
+              H = "I".charCodeAt(0);                  // column
+
+// C.tscores, C.bscores console.log(C);return;
+          // Summe team
+          var SS = [];
+          
+          if(Class != COMP[i].class || Team != COMP[i].team) {
+            ws1["A"+ix] = {t:"s", v:"Summe"};
+            for(var j in A){                            // devices
+              j = parseInt(j);
+              SS.push(String.fromCharCode(H + 1 + 2 * j)+(ix)+" * "+A[j].v);
+              if(C.tscores == "")
+                ws1[String.fromCharCode(H + 1 + 2 * j)+(ix)] = {t:"n", z:"0.000",
+                  f:"SUM("+
+                      String.fromCharCode(H + 1 + 2*j)+IX0+
+                      ":"+
+                      String.fromCharCode(H + 1 + 2*j)+(ix-1)+
+                    ")"
+                };
+              else
+                ws1[String.fromCharCode(H + 1 + 2 * j)+(ix)] = {t:"n", z:"0.000",
+                  F:String.fromCharCode(H + 1 + 2 * j)+(ix),
+                  f:"SUM(LARGE("+
+                      String.fromCharCode(H + 1 + 2*j)+IX0+
+                      ":"+
+                      String.fromCharCode(H + 1 + 2*j)+(ix-1)+
+                    ",ROW(INDIRECT(\"1:"+C.tscores+"\"))))"
+                };
+            }
+            //console.log(SS);return;
+            ws1[String.fromCharCode(H + 1 + 2 * A.length)+(ix)] = {t:"n", z:"0.000",
+              f:SS.join(" + ")
+            };
+            
+            Class = COMP[i].class;
+            Team  = COMP[i].team;
+            IX0   = ix + 2;
+            ix++;
+          }
+          if(COMP[i].val == "" || COMP[i].val === null) {
+            var o = makeObjArray({D:"",E:"",N:"",V:"x"}, A.length);
+            COMP[i].val = makeObjArray(o, CLASS.length);
+          } else
+            COMP[i].val = $.parseJSON(COMP[i].val);
+          var w = COMP[i].val[C.r];                   // competitor values
+          ws1["A"+ix] = {t:"s", v:COMP[i].surename};
+          ws1["B"+ix] = {t:"s", v:COMP[i].forename};
+          ws1["C"+ix] = {t:"s", v:COMP[i].birthday};
+          ws1["D"+ix] = {t:"s", v:COMP[i].club};
+          ws1["E"+ix] = {t:"s", v:COMP[i].team};
+          ws1["F"+ix] = {t:"s", v:COMP[i].class};
+          ws1["G"+ix] = {t:"s", v:COMP[i].squad};
+          ws1["H"+ix] = {t:"s", v:C.sex};
+          var S = [];
+          for(var j in A){                            // devices
+            ws1[String.fromCharCode(H)+(ix+0)] = {t:"s", v:A[j].g};
+            ws1[String.fromCharCode(H)+(ix+1)] = {t:"n", v:w[j].D, z:"0.000"};
+            ws1[String.fromCharCode(H)+(ix+2)] = {t:"n", v:w[j].E, z:"0.000"};
+            ws1[String.fromCharCode(H)+(ix+3)] = {t:"n", v:w[j].N, z:"0.000"};
+            ws1[String.fromCharCode(H + 1)+(ix+4)] = {t:"n", z:"0.000",
+              f:$.sprintf(
+                "%s+%s+%s",
+                String.fromCharCode(H)+(ix+1),
+                String.fromCharCode(H)+(ix+2),
+                String.fromCharCode(H)+(ix+3)
+              )
+            };
+            S.push(String.fromCharCode(H + 1)+(ix+4)+" * "+A[j].v);
+  
+            //H++;
+            H += 2;
+          }
+          ws1[String.fromCharCode(H)+(ix+0)] = {t:"s", v:"Summe"};
+
+          if(C.bscores == "")
+            ws1[String.fromCharCode(H)+(ix+4)] = {t:"n", z:"0.000", f:S.join(" + ")};
+          else
+            ws1[String.fromCharCode(H)+(ix+4)] = {t:"n", z:"0.000",
+              F:String.fromCharCode(H)+(ix+4),
+              f:"SUM(LARGE("+
+                String.fromCharCode(H-2*A.length+1)+(ix+4)+":"+
+                String.fromCharCode(H-1)+(ix+4)+
+                ",ROW(INDIRECT(\"1:"+C.bscores+"\"))))"
+              };
+          ix += 5;
+        }
+        ix++;
+        ws1["!ref"] = "A1:ZZ"+ix,
+        saveCompetition();
+      });
+    }
+    // sheet competition ...............................................
+    function saveCompetition(){
+      wb.SheetNames.push("Competitor");
+      wb.Sheets["Competitor"] = ws1;
+      wb.SheetNames.push("Competition");
+      wb.Sheets["Competition"] = ws2;
+      var wo = XLSX.write(wb, {
+            bookType:'xlsx',
+            bookSST:false,
+            type:'binary',
+            cellStyles:true
+          });
+
+      // the saveAs call downloads a file on the local machine .........
+      var b = new Blob([s2ab(wo)]);
+      saveAs(new Blob([s2ab(wo)], {type:"application/vnd.ms-excel"}), "competition.xlsx");
+    }
+    // string2arrayBuffer ..............................................
+    function s2ab(s){
+      var buf = new ArrayBuffer(s.length);
+      var view = new Uint8Array(buf);
+      for (var i=0; i!=s.length; ++i) view[i] = s.charCodeAt(i) & 0xFF;
+      return buf;
+    }
+    // make Array with n * Object o ....................................
+    function makeObjArray(o, n){
+      var A = [];
+      for(var i = 0;i < n;i++)
+        A.push(o);
+      return A;
+    }
+    // parse float .....................................................
+    function parseF(x){
+      return x == "" ? "" : parseFloat(x);
+    }
+  }
+  // -------------------------------------------------------------------
+  // import competition excel sheet
+  function compImpXls(ui){
+    var $dialog, s;
+    // .................................................................
+    // make relation's table
+    function make_table(){
+      var TABS = {};
+      for(var x in XLS_TAB){
+        TABS[x] = [
+          '<thead>'+
+          '<tr>'+
+            '<th style="width:1%">'+_("Name")+'</th>'+
+            '<th style="width:1%">'+_("Sheet")+'</th>'+
+            '<th style="width:1%">'+_("Function")+'</th>'+
+          '</tr>'+
+          '</thead>'+
+          '<tbody>'
+        ];
+        for(var i in XLS_TAB[x]){
+          if(typeof s[0][XLS_TAB[x][i].def] == "undefined")
+            XLS_TAB[x][i].def = "";
+          TABS[x].push(
+            '<tr data-col="'+i+'">'+
+              '<td>'+XLS_TAB[x][i].lab+'</td>'+
+              '<td><input name="def" value="'+XLS_TAB[x][i].def+'"></td>'+
+              '<td><input name="fun" value="'+XLS_TAB[x][i].fun+'"></td>'+
+            '</tr>'
+          );
+        }
+        TABS[x] = '<table>'+TABS[x].join("")+'</tbody></table>';
+      }
+      $dialog = $(
+        '<div>'+
+          '<div class="tabs">'+
+            '<ul>'+
+              '<li><a href="#COMP_TAB">'+_("Competitors")+'</a></li>'+
+              '<li><a href="#TEAM_TAB">'+_("Team")+'</a></li>'+
+              '<li><a href="#CLAS_TAB">'+_("Class")+'</a></li>'+
+            '</ul>'+
+            '<div id="COMP_TAB">'+TABS.COMP_TAB+'</div>'+
+            '<div id="TEAM_TAB">'+TABS.TEAM_TAB+'</div>'+
+            '<div id="CLAS_TAB">'+TABS.CLAS_TAB+'</div>'+
+          '</div>'+
+          '<div style="float:right">'+
+            'x - '+_("Cell value")+
+            ', (iS + 1) - '+_("Row number")+
+          '</div>'+
+        '</div>'
+      );
+      $("input", $dialog).addClass("ui-widget-content ui-corner-all");
+      $("td:first-child", $dialog).css("text-align", "right");
+      $("input[name=def]", $dialog).css("width", "15em");
+      $("input[name=fun]", $dialog).css("width", "30em");
+    }
+    // .................................................................
+    // preview 1 sheet record
+    function preview(){
+      console.log("preview", s);
+      var $dialog_view = $('<pre>'+s.length+'<br>'+JSON.stringify(s[0], " ", 2)+'</pre>');
+      $dialog_view
+      .dialog({
+        modal: true,
+        height:   "auto",
+        width:    "auto",
+        title:    _("Preview"),
+        close: function(ev, ui){
+          $(this).dialog("destroy");
+        },
+        buttons: [{
+          text: _("Cancel"),
+          click: function(){
+            $(this).dialog("close");
+          }
+        }]
+      });
+    }
+    // .................................................................
+    // insert data from sheet
+    function insert(iS){
+      aError.pop();
+      if(iS >= s.length)
+        return;
+      aError.push(iS);
+      var class_id = null,
+          team_id  = null,
+          DAT = {};
+
+      if(typeof s[iS][XLS_TAB.COMP_TAB.surename.def] == "undefined"){
+        insert(iS + 1);
+        return;
+      }
+//console.log(iS, s[iS][XLS_TAB.COMP_TAB.surename.def]);
+      // make data
+      for(var TAB in XLS_TAB){
+        DAT[TAB] = {};
+        for(var col in XLS_TAB[TAB]){
+          var x = s[iS][XLS_TAB[TAB][col].def];
+
+          if(!iS && typeof x == "undefined"){
+            console.log(col +" - "+ XLS_TAB[TAB][col].lab+"?!?");
+          }
+          DAT[TAB][col] = eval(XLS_TAB[TAB][col].fun);
+        }
+      }
+      // check class
+      var o = {
+        base: SQL_COMP_BASE + CompBase,
+        cmd:  [{
+          sgn:   "CHECK_CLASS",
+          query: 'SELECT id FROM class WHERE name=?',
+          para: [DAT.CLAS_TAB.name]
+        }]
+      };
+      o.cmd = JSON.stringify(o.cmd);
+      $.post("/sql", o, function(D){
+        if(D.CHECK_CLASS.length){
+          class_id = D.CHECK_CLASS[0].id;
+          check_team();
+        } else
+          insert_class();
+      });
+      // insert class
+      function insert_class(){
+        o = {
+          base: SQL_COMP_BASE + CompBase,
+          cmd:  [{
+            sgn:   "INSERT_CLASS",
+            query: 'INSERT INTO class (name,sex,r) VALUES(?,?,1)',
+            para: [DAT.CLAS_TAB.name, DAT.CLAS_TAB.sex]
+          }]
+        };
+        o.cmd = JSON.stringify(o.cmd);
+        $.post("/sql", o, function(D){
+          class_id = D.INSERT_CLASS.lastID;
+          check_team();
+        });
+      }
+      // check team
+      function check_team(){
+        var o = {
+          base: SQL_COMP_BASE + CompBase,
+          cmd:  [{
+            sgn:   "CHECK_TEAM",
+            query: 'SELECT id FROM team WHERE name=? AND class_id=?',
+            para: [DAT.TEAM_TAB.name, class_id]
+          }]
+        };
+        o.cmd = JSON.stringify(o.cmd);
+        $.post("/sql", o, function(D){
+          if(D.CHECK_TEAM.length){
+            team_id = D.CHECK_TEAM[0].id;
+            check_competitor();
+          } else
+            insert_team();
+        });
+      }
+      // insert  team
+      function insert_team(){
+        o = {
+          base: SQL_COMP_BASE + CompBase,
+          cmd:  [{
+            sgn:   "INSERT_TEAM",
+            query: 'INSERT INTO team (name,class_id,valid,nr,squad) VALUES(?,?,?,?,?)',
+            para: [
+              DAT.TEAM_TAB.name, class_id, DAT.TEAM_TAB.valid,
+              DAT.TEAM_TAB.nr, DAT.TEAM_TAB.squad
+            ]
+          }]
+        };
+        o.cmd = JSON.stringify(o.cmd);
+        $.post("/sql", o, function(D){
+          team_id = D.INSERT_TEAM.lastID;
+          check_competitor();
+        });
+      }
+      // check competitor
+      function check_competitor(){
+        var o = {
+          base: SQL_COMP_BASE + CompBase,
+          cmd:  [{
+            sgn:   "CHECK_COMP",
+            query: 'SELECT id FROM competitor WHERE class_id=? AND team_id=? AND forename=? AND surename=? AND birthday=?',
+            para: [
+              class_id, team_id,
+              DAT.COMP_TAB.forename, DAT.COMP_TAB.surename,
+              DAT.COMP_TAB.birthday
+            ]
+          }]
+        };
+        o.cmd = JSON.stringify(o.cmd);
+        $.post("/sql", o, function(D){
+          if(D.CHECK_COMP.length){
+            team_id = D.CHECK_COMP[0].id;
+            insert(iS + 1);
+          } else
+            insert_competitor();
+        });
+      }
+      // insert competitor
+      function insert_competitor(){
+        o = {
+          base: SQL_COMP_BASE + CompBase,
+          cmd:  [{
+            sgn:   "INSERT_COMP",
+            query: 'INSERT INTO competitor (class_id,team_id,forename,surename,birthday,club,valid,nr,squad) VALUES(?,?,?,?,?,?,?,?,?)',
+            para: [
+              class_id, team_id,
+              DAT.COMP_TAB.forename, DAT.COMP_TAB.surename,
+              DAT.COMP_TAB.birthday, DAT.COMP_TAB.club,
+              DAT.COMP_TAB.valid,
+              DAT.COMP_TAB.nr,       DAT.COMP_TAB.squad
+            ]
+          }]
+        };
+        o.cmd = JSON.stringify(o.cmd);
+        $.post("/sql", o, function(D){
+          insert(iS + 1);
+        });
+      }
+    }
+    // .................................................................
+    // transfer data from form to object
+    function form2object(){
+      for(var TAB in XLS_TAB){
+        $("tbody tr", "#"+TAB).each(function(){
+          var def = $("input[name=def]", this).val(),
+              fun = $("input[name=fun]", this).val(),
+              col = $(this).data("col");
+          XLS_TAB[TAB][col].def = def;
+          XLS_TAB[TAB][col].fun = fun;
+        });
+      }
+    }
+    // .................................................................
+    // transfer data from obbject to form
+    function object2form(){
+      for(var TAB in XLS_TAB){
+        $("tbody tr", "#"+TAB).each(function(){
+          var col = $(this).data("col");
+          $("input[name=def]", this).val(XLS_TAB[TAB][col].def);
+          $("input[name=fun]", this).val(XLS_TAB[TAB][col].fun);
+        });
+      }
+    }
+    // .................................................................
+    // load sheet from local host
+    loadDataLocal(function(data){
+      var wb = XLSX.read(data, {type: 'binary'}),
+          sheet_name = wb.SheetNames[0];
+
+      s = XLSX.utils.sheet_to_json(wb.Sheets[sheet_name]);
+      make_table();
+      $dialog
+      .dialog({
+        modal: true,
+        height:   "auto",
+        width:    "auto",
+        title:    _("Import")+" xls",
+        close: function(ev, ui){
+          $(this).dialog("destroy");
+        },
+        buttons: [{
+          text: _("Save options"),
+          click: function(){
+            form2object();
+            saveDataLocal(JSON.stringify({XLS_TAB:XLS_TAB}), "xls.json");
+          }
+        },{
+          text: _("Load options"),
+          click: function(){
+            loadDataLocal(function(data){
+              var data = $.parseJSON(data);
+              if(typeof data.XLS_TAB != "undefined"){
+                XLS_TAB = $.extend(true, {}, data.XLS_TAB);
+                object2form();
+              } else
+                aError.push("XLS_TAB?");
+            });
+          }
+        },{
+          text: _("Preview"),
+          click: function(){
+            preview();
+          }
+        },{
+          text: _("OK"),
+          class: "c_OK",
+          click: function(){
+            form2object();
+            insert(0);
+            $(this).dialog("close");
+          }
+        },{
+          text: _("Cancel"),
+          click: function(){
+            $(this).dialog("close");
+          }
+        }]
+      }).on("keydown", function(ev){
+        if(ev.keyCode == $.ui.keyCode.ENTER && ev.ctrlKey){
+          var OK = $("button.c_OK", $(this).dialog("widget"));
+          OK.click();
+          return false;
+        }
+      });
+      $("div.tabs", $dialog)
+      .tabs({
+        heightStyle: "auto"
+      });
+    }, "readAsBinaryString");
+  }
+  // -------------------------------------------------------------------
+  // event handler after insert => make new database
+  function insert(ui, callBack){
+    var oComp = ui.data.REC[0];
+    CompBase = $.sprintf("%s_%s.sqlite",
+      oComp.datum.replace(/-/g, "_"),
+      oComp.code
+    );
+    var o = {base: SQL_COMP_BASE + CompBase, cmd: []};
+    // .................................................................
+    for(var x  in TEMP_BASE)
+      o.cmd.push({
+        sgn:   "CREATE_"+x,
+        query: TEMP_BASE[x],
+        para:  []
+      });
+    o.cmd = JSON.stringify(o.cmd);
+    $.post("/sql", o, function(D){
+      if(callBack)
+        callBack();
+    });
+  }
+  // -------------------------------------------------------------------
+  // save data before changed
+  function data_before(ui, callBack){
+    if(ui.fun == "UPDATE"){
+      DataBefore = [{id: oComp.id, code: oComp.code, datum: oComp.datum}];
+      if(callBack)
+        callBack();
+      return;
+    }
+    var options = $T.tables("option");
+    options.dataModel._exec("WHERE", ui, function(data){
+      var o = {
+        base: SQL_SYS_BASE,
+        cmd:  [{
+          sgn:   "DATA_BEFORE",
+          query: "SELECT id,code,datum FROM competition "+data.WHERE,
+          para: []
+        }]
+      };
+      o.cmd = JSON.stringify(o.cmd);
+      $.post("/sql", o, function(D){
+        DataBefore = [];
+        D = D.DATA_BEFORE;
+        for(var i in D)
+          DataBefore.push(D[i]);
+        if(callBack)
+          callBack();
+      });
+    });
+  }
+  // -------------------------------------------------------------------
+  // remove databases after delete
+  function del(ui, callBack){
+    function unlink_base(iB){
+      if(iB >= DataBefore.length){
+        if(callBack)
+          callBack();
+        return;
+      }
+      var CompBaseDel = $.sprintf(
+        "%s_%s.sqlite",
+        DataBefore[iB].datum.replace(/-/g, "_"), DataBefore[iB].code
+      );
+      $.post("/unl/"+encodeURIComponent(SQL_COMP_BASE + CompBaseDel), function(D){
+        unlink_base(iB + 1);
+      }, "json");
+    }
+    unlink_base(0);
+  }
+  // -------------------------------------------------------------------
+  // rename databases after update if neccessary
+  function update(ui, callBack){
+    function rename_base(iB){
+      if(iB >= DataBefore.length){
+        if(callBack)
+          callBack();
+        return;
+      }
+      var CompBaseOld = $.sprintf(
+        "%s_%s.sqlite",
+        DataBefore[iB].datum.replace(/-/g, "_"), DataBefore[iB].code
+      );
+      var o = {
+        base: SQL_SYS_BASE,
+        cmd:  [{
+          sgn:   "DATA_AFTER",
+          query: "SELECT id,code,datum FROM competition WHERE id=? AND (code<>? OR datum<>?)",
+          para: [DataBefore[iB].id, DataBefore[iB].code, DataBefore[iB].datum]
+        }]
+      };
+      o.cmd = JSON.stringify(o.cmd);
+      $.post("/sql", o, function(D){
+        if(D.DATA_AFTER.length){
+          var CompBaseNew = $.sprintf(
+            "%s_%s.sqlite",
+            D.DATA_AFTER[0].datum.replace(/-/g, "_"), D.DATA_AFTER[0].code
+          );
+          $.post(
+            "/ren/", {
+              oldFile: SQL_COMP_BASE + CompBaseOld,
+              newFile: SQL_COMP_BASE + CompBaseNew
+            }, function(D){
+            rename_base(iB + 1);
+          });
+        } else
+          rename_base(iB + 1);
+      }, "json");
+    }
+    rename_base(0);
+  }
+  // -------------------------------------------------------------------
+  // edit logos
+  function logo_dialog(){
+    var $dialog = $(
+      '<div>'+
+        '<textarea style="width:40em;height:20em" class="ui-widget-content"></textarea>'+
+      '</div>'
+    );
+    $dialog.dialog({
+      modal: true,
+      height:   "auto",
+      width:    "auto",
+      title:    "Logos",
+      open: function(){
+        var v = $("input[name=logo]", "#id_Competition_Form").val();
+        $("textarea", $dialog).val(v);
+      },
+      close: function(ev, ui){
+        $(this).dialog("destroy");
+      },
+      buttons: [{
+        text: _("OK"),
+        class: "c_OK",
+        click: function(){
+          var v = $("textarea", $dialog).val();
+          $("input[name=logo]", "#id_Competition_Form").val(v);
+          $(this).dialog("close");
+        }
+      },{
+        text: _("Cancel"),
+        click: function(){
+          $(this).dialog("close");
+        }
+      }]
+    }).on("keydown", function(ev){
+      if(ev.keyCode == $.ui.keyCode.ENTER && ev.ctrlKey){
+        var OK = $("button.c_OK", $(this).dialog("widget"));
+        OK.click();
+        return false;
+      }
+    });
+  }
+  // -------------------------------------------------------------------
+  // xls default values
+  var XLS_TAB = {
+  COMP_TAB: {
+    "forename": {lab: _("Forename"), def: "Vorname", fun: "x"},
+    "surename": {lab: _("Surename"), def: "Name",    fun: "x"},
+    "birthday": {lab: _("Birthday"), def: "Geburt",
+     fun: "{var a = x.split('.');a[2]+'-'+a[1]+'-'+a[0]}"},
+    "club":     {lab: _("Club"),     def: "Vereinskurzname", fun: "x"},
+    "valid":    {lab: _("Valid"),    def: "",        fun: "'x'"},
+    "nr":       {lab: _("Number"),   def: "Nummer",  fun: "iS + 1"},
+    "squad":    {lab: _("Squad"),    def: "Riege",   fun: "x"}
+  },
+  TEAM_TAB: {
+    "name":     {lab: _("Team"),     def: "Vereinskurzname", fun: "x"},
+    "valid":    {lab: _("Valid"),    def: "",        fun: "'x'"},
+    "squad":    {lab: _("Squad"),    def: "Riege",   fun: "x"},
+    "nr":       {lab: _("Number"),   def: "Nummer",  fun: "x"}
+  },
+  CLAS_TAB: {
+    "sex":      {lab: _("Sex"),      def: "Geschlecht", fun: "x==2?'F':'M'"},
+    "name":     {lab: _("Class"),    def: "Wettkampfname", fun: "x"}
+  }};
+  // -------------------------------------------------------------------
+});
+</script>
+<div id="id_Competition" tabindex="1">
+  <form id="id_Competition_Form" style="display:block" class="mk-tables-form">
+    <input type="submit" tabindex="-1" style="position:absolute; top:-1000px;display:none">
+    <table id="id_Competition_Table" tabindex="2" border="0" class="ui-corner-all pq-grid-form">
+      <tbody>
+        <tr>
+          <td class="ui-widget-header lang" style="width:1%">Code</td>
+          <td class="ui-widget-content" style="width:30%">
+            <input type="text" name="code" class=" upd">
+          </td>
+          <td class="ui-widget-header lang" style="width:1%">Info</td>
+          <td class="ui-widget-header" style="width:77%;text-align:center">
+            <span class="c_statistic"></span>
+          </td>
+          <td class="ui-widget-content ui-state-disabled" style="width:1%">
+            <input type="text" name="id" style="width:4em;text-align:center;background:transparent" disabled>
+          </td>
+        </tr>
+        <tr>
+          <td class="ui-widget-header lang">Datum</td>
+          <td class="ui-widget-content">
+            <input type="text" name="datum" class="datepicker fix upd" style="text-align:center">
+          </td>
+          <td class="ui-widget-content" rowspan="3" colspan="3">
+            <textarea name="info" class="upd"></textarea>
+          </td>
+        </tr>
+        <tr>
+          <td class="ui-widget-header lang">State</td>
+          <td class="ui-widget-content">
+            <select name="s" style="border:0;width:100%" class="upd"></select>
+          </td>
+        </tr>
+        <tr>
+          <td class="ui-widget-header lang">Round</td>
+          <td class="ui-widget-content">
+            <input type="text" name="r" class="upd">
+          </td>
+        </tr>
+        <tr>
+          <td class="ui-widget-header lang email">Advice</td>
+          <td class="ui-widget-content"  colspan="3">
+            <input type="text" name="advice" style="width:100%" class="upd">
+          </td>
+          <td class="ui-widget-header" style="text-align:center;font-size:0.7em">
+            <input type="hidden" name="logo" class="upd">
+            <button title="Logos" data-choice="LOGO" class="ui-state-disabled" disabled>Logos</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </form>
+</div>
+<div id="id_Competition_Scroll"></div>

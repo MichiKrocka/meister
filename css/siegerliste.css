@@ -1,0 +1,8 @@
+  .small {font-size:0.5em;white-space:pre}
+  .float, td.rownums {text-align:right}
+  .table_data {width:100%;margin:auto;border-spacing:0;border-collapse:collapse}
+  .table_data th, .table_data td {border:1px solid;padding:2px}
+  .table_data tr.odd td {background: #e6f2ff;}
+  .x-x {text-decoration: line-through}
+  .headerSortUp {text-decoration:underline;}
+  .headerSortDown {text-decoration:overline;}

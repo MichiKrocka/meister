@@ -1,0 +1,387 @@
+<style type="text/css">
+<!--
+#id_Projector {
+  width:100%;
+  height:auto;
+  overflow:auto;
+}
+#id_Projector .mk-content-right,
+#id_Projector .mk-search,
+#id_Projector .mk-header {
+  border:0;
+}
+#id_Projector .mk-footer {
+  border-right-width:0;
+  border-bottom-width:0;
+}
+#id_Projector textarea {
+  width:100%;
+  height:10em !important;
+}
+.ui-autocomplete {
+  max-height: 70px;
+  height: 70px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: absolute;
+  cursor: default;
+  z-index:1000 !important;
+}
+-->
+</style>
+<script language="JavaScript" type="text/javascript">
+// #####################################################################
+jQuery(function($){
+  // -------------------------------------------------------------------
+  var $T,
+      sql_database,
+      slfMenuFile = oUser.menu;
+  // -------------------------------------------------------------------
+  make();
+  // -------------------------------------------------------------------
+  function selectMenu(ui){
+    var oldMenuFile  = $(ui.oldMenu).data("menu"),
+        newMenuFile  = $(ui.newMenu).data("menu");
+
+    if(DEBUG > 0 && newMenuFile != slfMenuFile){
+      var div_menu = $("#id_Content>div").filter('[data-menu="'+oldMenuFile+'"]');
+      $.Topic("selectMenu").unsubscribe(selectMenu);
+      $.Topic("logout").unsubscribe(saveOption);
+      $T.tables("destroy");
+      div_menu.detach();
+      return
+    }
+
+    if(newMenuFile == slfMenuFile){
+      $.Topic("logout").subscribe(saveOption);
+      if(typeof $T != "undefined")
+        $T
+        .tables("refresh")
+        .focus();
+    } else if(oldMenuFile == slfMenuFile){
+      saveOption();
+      $.Topic("logout").unsubscribe(saveOption);
+    }
+  }
+  // -------------------------------------------------------------------
+  function saveOption(){
+    $T.tables("saveOption");
+  }
+  // -------------------------------------------------------------------
+  function make(){
+    $.Topic("selectMenu").subscribe(selectMenu);
+    $.Topic("logout").subscribe(saveOption);
+    $T = $("#id_Projector").tables({
+      colModel: [{
+        indx:   "active",
+        title:  "Active",
+        show:   true,
+        search:  true,
+        align:  "center",
+        width:  "3em"
+      },{
+        indx:   "sequence",
+        title:  "Sequence",
+        show:   true,
+        search:  true,
+        align:  "left",
+        width:  "15em"
+      },{
+        indx:   "name",
+        title:  "Name",
+        show:   true,
+        search:  true,
+        align:  "left",
+        width:  "15em"
+      },{
+        indx:   "type",
+        title:  "Type",
+        show:   true,
+        search:  true,
+        align:  "left",
+        width:  "15em"
+      },{
+        indx:   "(SELECT datum||' '||code FROM competition WHERE projector.comp_id=competition.id)",
+        title:  "Competition",
+        show:   true,
+        search:  true,
+        align:  "left",
+        width:  "15em"
+      }],
+      dataModel: $.extend({}, sqliteDataModel),
+      alignTitle: "center",
+      Rows:      10,
+      Left:      1,
+      Header:    null,
+      Footer:    null,
+      Icons:     '<button data-choice="START" title="Start" class="lang-title">'+
+                   '<span class="lang">Start</span> / <span class="lang">Stop</span>'+
+                 '</button>',
+      ID:        "id",
+
+      User:         oUser.dbuser, // dbuser
+      Sign:         SIGN_PROJECTOR, // navig identification
+
+      SQL_SysBase:  SQL_SYS_BASE,
+      SQL_SysTable: SQL_SYS_TABLE,
+      SQL_Base:     SQL_SYS_BASE,
+      SQL_Table:    "projector",
+      SQL_Query:    "SELECT *,(SELECT datum||' '||code FROM competition WHERE projector.comp_id=competition.id) AS competition FROM projector",
+      // functions + events
+      i18n:         _,
+
+      beforeEdit: function(ev, ui){
+        $("button", ui.form).button("enable");
+      },
+      closeEdit: function(ev, ui){
+        $("button", ui.form).button("disable");
+      },
+      refreshRec: refreshRec,
+      clickButton: function(ev, ui){
+        switch(ui.choice){
+          case "START":
+            start_sequence();
+            break;
+          default:
+            console.log(ui.choice);
+            break;
+        }
+      },
+      build: function(ev, ui){
+        change_all_lang(this);
+      },
+      autoOpt: {
+        source: function(request, response){
+          var q = this.element[0].name;
+          switch(q){
+            case "competition":
+              var o = {
+                base: SQL_SYS_BASE,
+                cmd:  [{
+                  sgn:   "AUTO",
+                  query: "SELECT id,datum,datum||' '||code AS value,code FROM competition WHERE code LIKE('%'||?||'%') ORDER BY datum DESC,code",
+                  para: [request.term]
+                }]
+              };
+              break;
+            case "class":
+              var o = {
+                base: sql_database,
+                cmd:  [{
+                  sgn:   "AUTO",
+                  query: "SELECT id,name AS value FROM class WHERE name LIKE('%'||?||'%') ORDER BY name",
+                  para: [request.term]
+                }]
+              };
+              break;
+          }
+          o.cmd = JSON.stringify(o.cmd);
+          $.post("/sql", o, function(D){
+//console.log(D.AUTO);
+            response(D.AUTO);
+          });
+        },
+        select: function(ev, ui){
+          set_value(this, ui);
+        },
+        change: function(ev, ui){
+          set_value(this, ui);
+        }
+      }
+    });
+    setTimeout(function(){
+      $T.focus();
+    }, 1000);
+    // .................................................................
+    function set_value(el, ui){
+      if(ui.item == null)
+        return;
+      switch(el.name){
+        case "competition":
+          $("input[name=comp_id]", "#id_Projector_Form").val(ui.item.id);
+          sql_database = $.sprintf(
+            "%s%s_%s.sqlite",
+            SQL_COMP_BASE,
+            ui.item.datum.replace(/-/g, "_"),
+            ui.item.code
+          );
+          get_class("");
+          break;
+        case "class":
+          $("input[name=class_id]", "#id_Projector_Form").val(ui.item.id);
+          get_class(ui.item.id);
+          break;
+        default:
+          console.log(el.name, ui);
+      }
+    }
+    // -----------------------------------------------------------------
+    $("input[name=type]", "#id_Projector")
+    .on("change", function(ev){
+      $(".TABLE,.BOARD,.MESSAGE").hide();
+      $("."+this.value).show();
+    });
+    // -----------------------------------------------------------------
+    // event handler for refresh record
+    function refreshRec(ev, ui){
+      $("input[name=type]", "#id_Projector")
+      .trigger("change");
+      if(ui.REC.length){
+        if(ui.REC.comp_id != ""){
+          get_competition(ui.REC[0].comp_id, ui.REC[0].class_id);
+        } else
+          get_class("");  // reset class
+      }
+    }
+  }
+  // -------------------------------------------------------------------
+  function get_competition(comp_id, class_id){
+    var o = {
+      base: SQL_SYS_BASE,
+      cmd:  [{
+        sgn:   "COMP",
+        query: "SELECT datum,code FROM competition WHERE id=?",
+        para: [comp_id]
+      }]
+    };
+    o.cmd = JSON.stringify(o.cmd);
+    $.post("/sql", o, function(D){
+      if(D.COMP.length){
+        sql_database = $.sprintf(
+          "%s%s_%s.sqlite",
+          SQL_COMP_BASE,
+          D.COMP[0].datum.replace(/-/g, "_"),
+          D.COMP[0].code
+        );
+      }
+      get_class(class_id);
+    });
+  }
+  // -------------------------------------------------------------------
+  function get_class(class_id){
+    if(class_id === ""){
+      $("input[name=class_id]", "#id_Projector_Form").val("");
+      $("input[name=class]", "#id_Projector_Form").val("");
+      return;
+    }
+    var o = {
+      base: sql_database,
+      cmd:  [{
+        sgn:   "CLASS",
+        query: "SELECT name FROM class WHERE id=?",
+        para: [class_id]
+      }]
+    };
+    o.cmd = JSON.stringify(o.cmd);
+    $.post("/sql", o, function(D){
+      if(D.CLASS.length){
+        $("input[name=class]", "#id_Projector_Form").val(D.CLASS[0].name);
+      }
+    });
+  }
+  // -------------------------------------------------------------------
+  function start_sequence(){
+    if(window.WinPro != null && !window.WinPro.closed){
+      window.WinPro.close();
+      return;
+    }
+    var report = {
+      dbuser:       oUser.dbuser,
+      type:         "PROJECTOR",
+      sequence:     $("input[name=sequence]", "#id_Projector_Form").val(),
+      lang:         oUser.lang,
+      hide_menu:    true,
+      DIR_LANG:     DIR_LANG,
+      SQL_BASE_DIR: SQL_BASE_DIR,
+      SQL_SYS_BASE: SQL_SYS_BASE,
+      SQL_COMP_BASE:SQL_COMP_BASE
+    };
+    window.fullScreen = true;
+    window.WinPro = window.open(
+      "list.htm"+window.route,
+      JSON.stringify(report),
+      'scrollbars=yes,toolbar=no,width=900,height=700,resizable=yes'
+    );
+    window.WinPro.focus();
+  }
+  // -------------------------------------------------------------------
+});
+</script>
+<div id="id_Projector" tabindex="1" style="display:none" class="ui-corner-top">
+  <form id="id_Projector_Form" style="display:block" class="mk-tables-form">
+    <input type="hidden" name="comp_id" class="upd">
+    <input type="hidden" name="class_id" class="upd">
+    <input type="submit" tabindex="-1" style="position:absolute; top:-1000px;display:none">
+    <table tabindex="2">
+      <tbody>
+        <tr>
+          <td class="ui-widget-header lang" style="width:1%">Sequence</td>
+          <td class="ui-widget-content" style="width:1%">
+            <input type="text" name="sequence" style="width:25em" class="upd">
+          </td>
+          <td class="ui-widget-header lang" style="width:1%">Active</td>
+          <td class="ui-widget-content" style="width:3em">
+            <input data-enum='["x","-"]' type="button" name="active" class="enum upd" style="background-color:transparent;width:100%;text-align:center">
+          </td>
+          <td class="ui-widget-header" style="width:5em"></td>
+          <td class="ui-widget-header"></td>
+          <td class="ui-widget-content" style="width:1%">
+            <input type="text" name="id" style="width:4em;text-align:center" disabled>
+          </td>
+        </tr>
+        <tr>
+          <td class="ui-widget-header lang">Name</td>
+          <td class="ui-widget-content">
+            <input type="text" name="name" style="width:100%" class="upd">
+          </td>
+          <td class="ui-widget-header lang">Type</td>
+          <td class="ui-widget-content" colspan="2" style="width:8em">
+            <input data-enum='["BOARD","MESSAGE","TABLE","TIMER"]' type="button" name="type" class="enum upd" style="background-color:transparent;width:100%">
+          </td>
+          <td class="ui-widget-header" colspan="2"></td>
+        </tr>
+        <tr class="BOARD TABLE">
+          <td class="ui-widget-header lang">Competition</td>
+          <td class="ui-widget-content" colspan="6">
+            <input type="text" name="competition" class="autocomplete">
+          </td>
+        </tr>
+        <tr class="BOARD">
+          <td class="ui-widget-header" colspan="5"></td>
+          <td class="ui-widget-header lang BOARD">Sex</td>
+          <td class="ui-widget-content">
+            <input data-enum='["M","F"]' type="button" name="sex" class="enum upd" style="background-color:transparent;width:100%">
+          </td>
+        </tr>
+        <tr class="TABLE">
+          <td class="ui-widget-header lang">Class</td>
+          <td class="ui-widget-content" colspan="4">
+            <input type="text" name="class" class="autocomplete">
+          </td>
+          <td class="ui-widget-header" colspan="2"></td>
+        </tr>
+        <tr class="TABLE">
+          <td class="ui-widget-header" colspan="2"></td>
+          <td class="ui-widget-header lang">Report</td>
+          <td class="ui-widget-content" colspan="2">
+            <input data-enum='["ONE","TEAM","DEVICES","ONE_ALL","TEAM_ALL"]' type="button" name="report" class="enum upd" style="background-color:transparent;width:100%">
+          </td>
+          <td class="ui-widget-header lang">Round</td>
+          <td class="ui-widget-content">
+            <input type="text" value="" name="round" class="upd">
+          </td>
+        </tr>
+        <tr class="MESSAGE">
+          <td class="ui-widget-header lang">Message</td>
+          <td class="ui-widget-header" colspan="6"></td>
+        </tr>
+        <tr class="MESSAGE">
+          <td class="ui-widget-content" colspan="7" style="height:10em !important;">
+            <textarea name="message" class="upd"></textarea>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+  </form>
+</div>

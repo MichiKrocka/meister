@@ -1,0 +1,616 @@
+<style type="text/css">
+<!--
+#id_Rating {
+  width:100%;
+  height:auto;
+  overflow:auto;
+}
+#id_Rating .mk-content-right,
+#id_Rating .mk-search,
+#id_Rating .mk-header {
+  border:0;
+}
+button.choice div {
+  max-width:20em;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+#id_Rating_Extend {
+  margin-top:5px;
+}
+#id_Rating_Extend td {
+  white-space:nowrap;
+  width:1%;
+  text-overflow:ellipsis;
+  overflow:hidden;
+}
+#id_Rating_Extend td.ui-widget-header {
+  text-align:center;
+  width:10%;
+}
+#id_Rating_Extend td.dev div {
+  max-width:4em;
+  text-overflow: ellipsis;
+}
+#id_Rating_Extend td:nth-child(1) {
+  width:1%;
+}
+#id_Rating_Extend td:last-child {
+  width:20%;
+}
+#id_Rating_Extend input.enum {
+  width:2em;
+  text-align:center;
+}
+#id_Rating_Extend td.ui-widget-content input[type=text] {
+  text-align:right;
+}
+#id_Rating_Extend tr:last-child td.ui-widget-content input[type=text] {
+  font-weight:bold;
+}
+-->
+</style>
+<script language="JavaScript" type="text/javascript">
+// #####################################################################
+jQuery(function($){
+  // -------------------------------------------------------------------
+  var $T,
+      DataBefore,
+      class_id = "",
+      oC,
+      oA,
+      iR,
+      slfMenuFile = oUser.menu;
+  // -------------------------------------------------------------------
+  make();
+  // -------------------------------------------------------------------
+  // event handler for menu changed
+  function selectMenu(ui){
+    var oldMenuFile  = $(ui.oldMenu).data("menu"),
+        newMenuFile  = $(ui.newMenu).data("menu");
+
+    if(DEBUG > 0 && newMenuFile != slfMenuFile){
+      saveOption();
+      div_menu = $("#id_Content>div").filter('[data-menu="'+oldMenuFile+'"]');
+      $.Topic("selectMenu").unsubscribe(selectMenu);
+      $.Topic("logout").unsubscribe(saveOption);
+      //$.Topic("resizeWindow").unsubscribe(resize);
+      $T.tables("destroy");
+      div_menu.detach();
+      return
+    }
+
+    if(newMenuFile == slfMenuFile){
+      $.Topic("logout").subscribe(saveOption);
+      //$.Topic("resizeWindow").subscribe(resize);
+      if(typeof $T != "undefined")
+        $T
+        .tables("refresh")
+        .focus();
+    } else if(oldMenuFile == slfMenuFile){
+      saveOption();
+      $.Topic("logout").unsubscribe(saveOption);
+      //$.Topic("resizeWindow").unsubscribe(resize);
+    }
+  }
+  // -------------------------------------------------------------------
+  // save options of table grid
+  function saveOption(){
+    $T.tables("saveOption");
+  }
+  // -------------------------------------------------------------------
+  // make table grid and form
+  function make(){
+    // subscribe events
+    $.Topic("selectMenu").subscribe(selectMenu);
+    $.Topic("logout").subscribe(saveOption);
+    //$.Topic("resizeWindow").subscribe(resize);
+    // table  grid
+    $T = $("#id_Rating").tables({
+      colModel: [{
+        indx:   "valid",
+        title:  "Valid",
+        show:   true,
+        search: true,
+        align:  "center",
+        width:  "3em"
+      },{
+        indx:   "nr",
+        title:  "Number",
+        show:   true,
+        search: true,
+        align:  "center",
+        width:  "4.5em"
+      },{
+        indx:   "squad",
+        title:  "Squad",
+        show:   true,
+        search: true,
+        align:  "center",
+        width:  "3em"
+      },{
+        indx:   "strftime('%%Y',birthday)",
+        title:  "Year",
+        show:   true,
+        search: true,
+        align:  "center",
+        width:  "3.5em"
+      },{
+        indx:   "CASE WHEN surename<>'' THEN surename||' ' ELSE '' END||forename",
+        title:  "Name",
+        show:   true,
+        search: true,
+        align:  "left",
+        width:  "15em"
+      },{
+        indx:   "(SELECT sex||' '||name FROM class WHERE class.id=competitor.class_id)",
+        title:  "Class",
+        show:   true,
+        search:  true,
+        align:  "left",
+        width:  "12em"
+      },{
+        indx:   "club",
+        title:  "Club",
+        show:   true,
+        search:  true,
+        align:  "left",
+        width:  "12em"
+      },{
+        indx:   "(SELECT name FROM team WHERE team.id=competitor.team_id)",
+        title:  "Team",
+        show:   true,
+        search:  true,
+        align:  "left",
+        width:  "12em"
+      }],
+      dataModel:   $.extend(true, {}, sqliteDataModel),
+      accessModel: {
+        edt: oAccess[slfMenuFile].edt,
+        ins: false,
+        del: false,
+        rep: oAccess[slfMenuFile].rep
+      },
+      alignTitle:  "center",
+      orderBy:   "nr",
+      orderType: "ASC",
+      Rows:      10,
+      Left:      5,
+      Header:    null,
+      Footer:    null,
+      Icons:     '<button data-choice="CHOICE" class="choice"><div>'+_("All")+'</div></button>',
+      ID:        "id",
+
+      User:         oUser.dbuser, // dbuser
+      Sign:         SIGN_RATING,  // navig identification
+
+      SQL_SysBase:  SQL_SYS_BASE,
+      SQL_SysTable: SQL_SYS_TABLE,
+      SQL_Base:     SQL_COMP_BASE + CompBase,
+      SQL_Table:    "competitor",
+      SQL_Query:
+        "SELECT "+
+          "id,nr,surename||' '||forename AS name,val,class_id "+
+          ",(SELECT sex FROM class WHERE class.id=competitor.class_id) AS sex "+
+        "FROM competitor",
+      // functions + events
+      i18n:         _,
+      beforeEdit: function(ev, ui){
+        notify_rating("WAIT", ui);
+      },
+      afterEdit:  function(ev,ui){
+        notify_rating("READY", ui);
+        afterEdit(ev, ui);
+      },
+      cancelEdit: function(ev, ui){
+        notify_rating("", ui);
+      },
+      closeEdit: function(ev, ui){
+        $('input,button', "#id_Rating_Extend").data("c", false);
+      },
+      beforeRefreshRec: beforeRefreshRec,
+      refreshRec: function(ev, ui, callBack){
+        if(ui.REC.length == 0)
+          return;
+        Data2Form();
+      },
+      build: function(ev, ui){
+        change_all_lang(this);
+        var self = this;
+        setTimeout(function(){
+          self.focus();
+        }, 500);
+      },
+      clickButton: function(ev, ui){
+        if(ui.choice == "CHOICE"){
+          choice(ui);
+          return;
+        }
+      }
+    });
+  }
+  // -------------------------------------------------------------------
+  function notify_rating(state, ui){
+    if(oUser.roll == "")
+      ;//return;
+    switch(state){
+      case "WAIT":
+        var o = {
+          base: SQL_SYS_BASE,
+          cmd:  [{
+            sgn:   "EVENT_INS",
+            query: "INSERT INTO sys_event (comp_id,compr_id,sex,roll,state) VALUES(?,?,?,?,?)",
+            para: [oComp.id, ui.data[0].id, ui.data[0].sex, oUser.roll, state]
+          }]
+        };
+        break;
+      case "READY":
+        var o = {
+          base: SQL_SYS_BASE,
+          cmd:  [{
+            sgn:   "EVENT_DEL",
+            query: "DELETE FROM sys_event WHERE comp_id=? AND compr_id=? AND roll=? AND sex=?",
+            para: [oComp.id, ui.data[0].id, oUser.roll, ui.data[0].sex]
+          },{
+            sgn:   "EVENT_INS",
+            query: "INSERT INTO sys_event (comp_id,compr_id,sex,roll,state) VALUES(?,?,?,?,?)",
+            para: [oComp.id, ui.data[0].id, ui.data[0].sex, oUser.roll, state]
+          },{
+            sgn:   "EVENT_UPD",
+            query: "DELETE FROM sys_event WHERE id IN(SELECT id FROM sys_event WHERE roll=? AND sex=? ORDER BY stmp DESC LIMIT -1 OFFSET ?)",
+            para: [oUser.roll, ui.data[0].sex, BOARD_N]
+          }]
+        };
+        break;
+      case "":
+        var o = {
+          base: SQL_SYS_BASE,
+          cmd:  [{
+            sgn:   "EVENT_DEL",
+            query: "DELETE FROM sys_event WHERE comp_id=? AND compr_id=? AND roll=? AND sex=?",
+            para: [oComp.id, ui.data[0].id, oUser.roll, ui.data[0].sex]
+          }]
+        };
+        break;
+    }
+    o.cmd = JSON.stringify(o.cmd);
+    $.post("/sql", o, function(D){
+      //console.log(D);
+    });
+  }
+  // -------------------------------------------------------------------
+  function choice(ui){
+    var self  = ui.element,
+        el    = ui.button,
+        $menu = $('ul.mk-tables-menu', self.element),
+        li = [
+          '<li data-flt="CANCEL"><div>'+_("Cancel")+'</div></li>',
+          '<li><div></div></li>',
+          '<li data-flt=""><div>'+_("All")+'</div></li>'
+        ],
+        o = {};
+    menu_squad();
+    // -----------------------------------------------------------------
+    // query
+    function menu_squad(){
+      var o = {
+        base: SQL_COMP_BASE + CompBase,
+        cmd:  [{
+          sgn:   "SQUAD",
+          query: "SELECT squad FROM competitor GROUP BY squad ORDER BY squad",
+          para: []
+        },{
+          sgn:   "CLASS",
+          query: "SELECT id,name FROM class ORDER BY name",
+          para: []
+        },{
+          sgn:   "TEAM",
+          query: "SELECT id,name,class_id,(SELECT name FROM class WHERE team.class_id=class.id) AS class FROM team ORDER BY class,name",
+          para: []
+        }]
+      };
+      o.cmd = JSON.stringify(o.cmd);
+      $.post("/sql", o, function(D){
+        // squad
+        if(D.SQUAD.length){
+          var ul = [];
+          for(var i in D.SQUAD){
+            ul.push(
+              '<li data-flt="squad='+D.SQUAD[i].squad+'">'+
+                '<div>'+
+                  D.SQUAD[i].squad+". "+_("Squad")+
+                '</div>'+
+              '</li>'
+            );
+          }
+          li.push('<li><div>'+_("Squad")+'</div><ul>'+ul.join("")+'</ul></li>');
+        }
+        // class
+        if(D.CLASS.length){
+          var ul = [];
+          for(var i in D.CLASS){
+            ul.push(
+              '<li data-flt="class_id='+D.CLASS[i].id+'">'+
+                '<div>'+
+                  D.CLASS[i].name+
+                '</div>'+
+              '</li>'
+            );
+          }
+          li.push('<li><div>'+_("Class")+'</div><ul>'+ul.join("")+'</ul></li>');
+        }
+        // team
+        if(D.TEAM.length){
+          var ul = [],
+              ll = [],
+              cp = "";
+          for(var i in D.TEAM){
+            if(cp != "" && D.TEAM[i].class != cp){
+              ul.push('<li><div>'+cp+'</div><ul>'+ll.join("")+'</ul>'+'</li>');
+              ll = [];
+            }
+            cp = D.TEAM[i].class;
+            ll.push(
+              '<li data-flt="team_id='+D.TEAM[i].id+'">'+
+                '<div>'+
+                  D.TEAM[i].name+
+                '</div>'+
+              '</li>'
+            );
+          }
+          ul.push('<li><div>'+cp+'</div><ul>'+ll.join("")+'</ul>'+'</li>');
+          li.push('<li><div>'+_("Team")+'</div><ul>'+ul.join("")+'</ul></li>');
+        }
+        if(!$menu.is(":hidden")){
+          $(this)
+          .menu("destroy")
+          .hide();
+          self._overlay(false);
+          self.element.focus();
+          return false;
+        }
+        self._overlay(true);
+        $menu
+        .html(li.join(""))
+        .show()
+        .position({
+          my: "left top",
+          at: "left bottom",
+          collision: "flip",
+          of: el
+        })
+        .menu({
+          select: function(ev, uis){
+            var c = $(uis.item).data("flt");
+            if(typeof c == "undefined")
+              return;
+            switch(c){
+              case "CANCEL":
+                break;
+              default:
+                var t = uis.item.text();
+                $(el).button("option", "label", '<div>'+t+'</div>');
+                $T
+                .tables("option", {
+                  cont:    {},
+                  filtFix: c,
+                  filt:    "",
+                  filtSw:  false
+                })
+                .tables("refresh");
+            }
+            $(this).menu("option", "close")();
+          },
+          close: function(){
+            $menu
+            .off()
+            .menu("destroy")
+            .hide();
+            self._overlay(false);
+            self.element.focus();
+          }
+        })
+        .focus()
+        .on("keydown", function(ev){
+          if(ev.which == $.ui.keyCode.ESCAPE){
+            $menu.menu("option", "close")();
+          }
+          ev.preventDefault();
+          return false;
+        });
+        $($menu).on("mousewheel",  wheel);
+        $("ul", $menu).on("mousewheel",  wheel);
+        // mousewheel
+        function wheel(ev){
+          var dY = ev.originalEvent.deltaY;
+          $(this).scrollTop($(this).scrollTop() + 4 * dY);
+          return false;
+        }
+      });
+    }
+  }
+  // -------------------------------------------------------------------
+  // make form
+  function beforeRefreshRec(ev, ui, callBack){
+    if(ui.REC.length == 0){
+      if(callBack)
+        callBack();
+      return $("#id_Rating_Extend").text("");
+    }
+    if(class_id == ui.REC[0].class_id){
+      // rating data
+      var val = oClass.DefaultVal(oC.val, ui.REC[0].val == "" ? {} : $.parseJSON(ui.REC[0].val));
+      oA.val = val;
+      oClass.CalcOne(oC, oA, iR);
+      if(callBack)
+        callBack();
+      return;
+    }
+    var o = {
+      base: SQL_COMP_BASE + CompBase,
+      cmd:  [{
+        sgn:   "CLASS",
+        query: "SELECT * FROM class WHERE id=?",
+        para: [ui.REC[0].class_id]
+      }]
+    };
+    o.cmd = JSON.stringify(o.cmd);
+    $.post("/sql", o, function(D){
+      if(D.CLASS.length == 0){
+        $("#id_Rating_Extend").html('<tr><td>'+_("Class")+'?</td></tr>');
+        oC = oV = null;
+        class_id = null;
+        return;
+      }
+      // class data
+      oC = D.CLASS[0];
+      if(oC.val == null || oC.val == "")
+        oC.val = {};
+      else
+        oC.val = $.parseJSON(oC.val);
+      // rating data
+      var val = oClass.DefaultVal(oC.val, ui.REC[0].val == "" ? {} : $.parseJSON(ui.REC[0].val));
+      oA = $.extend(true, {}, ui.REC[0]);
+      oA.val = val;
+      // Round
+      iR = ((oC.r != "" && oC.r !== null) ?
+              oC.r : (oComp.r == "" ? 1 : oComp.r)) - 1;
+      iR = Math.min(iR, oC.val.length - 1);
+      var html = oClass.MakeForm(
+        iR,       // round
+        oC,       // class
+        oA        // data
+      );
+      $("input[type=text],input[type=button]", "#id_Rating_Extend")
+      .off("change");
+      $("#id_Rating_Extend").html(html);
+      if(oUser.roll == "")
+        $("td.ui-state-disabled", "#id_Rating_Extend")
+        .removeClass("ui-state-disabled");
+      else
+        $("td."+oUser.roll.split(",").join(",td."), "#id_Rating_Extend")
+        .removeClass("ui-state-disabled");
+      $("td.ui-state-disabled input", "#id_Rating_Extend")
+      .attr("disabled", true);
+      $("input[type=text],input[type=button]", "#id_Rating_Extend")
+      .on("change", function(ev){
+        var v = this.value;
+        $(this).data("c", true);
+        if($(this).attr("type") != "button"){
+          v = v.replace(/,/g, ".").replace(/[^-.0-9]/g, "");
+          this.value = v == "" ? "" : eval(v);
+        }
+        Form2Data();
+        oClass.CalcOne(oC, oA, iR);
+        Data2Form();
+      });
+      oClass.CalcOne(oC, oA, iR);
+      if(callBack)
+        callBack();
+    });
+  }
+  // -------------------------------------------------------------------
+  // set form with data
+  function Data2Form(){
+    if(oA.val == "" || oA.val.length == 0)
+      return;
+    var A = oA.val[iR];
+    for(var x in A){
+      for(var y in {D:"", E:"", N:"", S:""}){
+        $("tr[data-v="+y+"] input", "#id_Rating_Extend").eq(x).val($.sprintf(
+          A[x][y] === "" ? "%s" : "%0.3f",
+          A[x][y]
+        ));
+      }
+      $("tr[data-v=V] input").eq(x).val(A[x].V);
+    }
+    $("tr[data-v=S] input").last().val($.sprintf(
+      oA.val[iR].S === "" ? "" : "%0.3f",
+      oA.val[iR].S
+    ));
+  }
+  // -------------------------------------------------------------------
+  // get data from form
+  function Form2Data(){
+    var A = oA.val[iR];
+    for(var x in A){
+      for(var y in {D:"", E:"", N:"", S:""}){
+        var v = $("tr[data-v="+y+"] input", "#id_Rating_Extend").eq(x).val();
+        if(typeof v == "undefined")
+          continue;
+        A[x][y] = v == "" ? "" : parseFloat(v);
+      }
+      A[x].V = $("tr[data-v=V] input").eq(x).val();
+    }
+    oA.val[iR].S = parseFloat($("tr[data-v=S] input").last().val());
+  }
+  // -------------------------------------------------------------------
+  function afterEdit(ev, ui){
+    var val = oA.val;
+    if(val.length == 0)
+      return;
+    delete val[iR].S;
+    $('input[type=text],input[type=button]', "#id_Rating_Extend")
+    .filter(function(){
+      return $(this).data("c");
+    })
+    .each(function(){
+      var c = $(this).data("c"),
+          v = $(this).closest("tr").data("v"),
+          g = $(this).parent().index() - 1;
+      if(v == "V")
+        g /= 2;
+    });
+    // strip calculated dates
+    for(var r in val){
+      for(var g in val[r]){
+        delete val[r][g].S;
+        delete val[r][g].X;
+      }
+    }
+    var o = {
+      base: SQL_COMP_BASE + CompBase,
+      cmd:  [{
+        sgn:   "RATING",
+        query: "JSON",
+        col:   "val",
+        table: "competitor",
+        val:   val,
+        para:  [ui.data[0].id]
+      }]
+    };
+    o.cmd = JSON.stringify(o.cmd);
+    $.post("/sql", o, function(D){
+      $T.tables("refresh");
+    });
+  }
+});
+</script>
+<div id="id_Rating" tabindex="1" style="display:none">
+  <form id="id_Rating_Form" style="display:block" class="mk-tables-form">
+    <input type="submit" tabindex="-1" style="position:absolute; top:-1000px;display:none">
+    <table id="id_Rating_Table" tabindex="2">
+      <tbody>
+          <td class="ui-widget-header lang" style="width:1%">Number</td>
+          <td class="ui-widget-content" style="width:1%">
+            <input type="text" name="nr" disabled style="width:4em;text-align:center">
+          </td>
+          <td class="ui-widget-header lang" style="width:1%">Name</td>
+          <td class="ui-widget-content">
+            <input type="text" name="name" disabled>
+          </td>
+          <td class="ui-widget-header" style="width:3em"></td>
+          <td class="ui-widget-content" style="width:1%">
+            <input type="text" name="id" style="width:4em;text-align:center" disabled>
+          </td>
+      </tbody>
+    </table>
+    <input type="hidden" name="val">
+    <input type="hidden" name="sex">
+    <input type="hidden" name="tscores">
+    <input type="hidden" name="bscores">
+    <table id="id_Rating_Extend" tabindex="3">
+    </table>
+  </form>
+</div>

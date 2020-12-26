@@ -1,0 +1,265 @@
+<style type="text/css">
+<!--
+#id_Team {
+  width:100%;
+  height:auto;
+  overflow:auto;
+}
+#id_Team .mk-content-right,
+#id_Team .mk-search,
+#id_Team .mk-header {
+  border:0;
+}
+#id_Team .mk-footer {
+  border-right-width:0;
+  border-bottom-width:0;
+}
+-->
+</style>
+<script language="JavaScript" type="text/javascript">
+// #####################################################################
+jQuery(function($){
+  // -------------------------------------------------------------------
+  var $T,
+      slfMenuFile = oUser.menu;
+  // -------------------------------------------------------------------
+  make();
+  // -------------------------------------------------------------------
+  function selectMenu(ui){
+    var oldMenuFile  = $(ui.oldMenu).data("menu"),
+        newMenuFile  = $(ui.newMenu).data("menu");
+
+    if(DEBUG > 0 && newMenuFile != slfMenuFile){
+      saveOption();
+      var div_menu = $("#id_Content>div").filter('[data-menu="'+oldMenuFile+'"]');
+      $.Topic("selectMenu").unsubscribe(selectMenu);
+      $.Topic("logout").unsubscribe(saveOption);
+      $T.tables("destroy");
+      div_menu.detach();
+      return
+    }
+
+    if(newMenuFile == slfMenuFile){
+      goTo();
+      $.Topic("logout").subscribe(saveOption);
+      if(typeof $T != "undefined")
+        $T
+        .tables("refresh")
+        .focus();
+    } else if(oldMenuFile == slfMenuFile){
+      saveOption();
+      $.Topic("logout").unsubscribe(saveOption);
+    }
+  }
+  // -------------------------------------------------------------------
+  function saveOption(){
+    $T.tables("saveOption");
+  }
+  // -------------------------------------------------------------------
+  function make(){
+    $.Topic("selectMenu").subscribe(selectMenu);
+    $.Topic("logout").subscribe(saveOption);
+    $T = $("#id_Team").tables({
+      colModel: [{
+        indx:   "valid",
+        title:  "Valid",
+        show:   true,
+        search:  true,
+        align:  "center",
+        width:  "3em"
+      },{
+        indx:   "nr",
+        title:  "Number",
+        show:   true,
+        search:  true,
+        align:  "right",
+        width:  "4em"
+      },{
+        indx:   "squad",
+        title:  "Squad",
+        show:   true,
+        search:  true,
+        align:  "right",
+        width:  "3em"
+      },{
+        indx:   "(SELECT COUNT(*) FROM competitor WHERE team.id=team_id)",
+        title:  "Size",
+        show:   true,
+        search:  true,
+        align:  "right",
+        width:  "3em"
+      },{
+        indx:   "name",
+        title:  "Team",
+        show:   true,
+        search:  true,
+        align:  "left",
+        width:  "18em"
+      },{
+        indx:   "(SELECT sex||' '||name FROM class WHERE class.id=class_id)",
+        title:  "Class",
+        show:   true,
+        search:  true,
+        align:  "left",
+        width:  "18em"
+      }],
+      dataModel: $.extend({}, sqliteDataModel),
+      alignTitle: "center",
+      Rows:      10,
+      Left:      5,
+      Header:    null,
+      Footer:    null,
+      Icons:      '<button data-choice="MEMBER">'+_("Member")+'&hellip;</button>',
+      ID:        "id",
+
+      User:         oUser.dbuser, // dbuser
+      Sign:         SIGN_TEAM, // navig identification
+
+      SQL_SysBase:  SQL_SYS_BASE,
+      SQL_SysTable: SQL_SYS_TABLE,
+      SQL_Base:     SQL_COMP_BASE + CompBase,
+      SQL_Table:    "team",
+      SQL_Query:    "SELECT *,(SELECT sex||' '||name FROM class WHERE class.id=class_id) AS class FROM team",
+      // functions + events
+      i18n:         _,
+
+      beforeEdit: function(ev, ui){
+        $("button", ui.form).button("enable");
+      },
+      afterEdit: function(ev, ui){
+        var o = {
+          base: SQL_COMP_BASE + CompBase,
+          cmd:  [{
+            sgn:   "SQUAD",
+            query: "UPDATE competitor SET squad=?,class_id=? WHERE team_id=?",
+            para: [
+              $("input[name=squad]", "#id_Team_Form").val(),
+              $("input[name=class_id]", "#id_Team_Form").val(),
+              $("input[name=id]", "#id_Team_Form").val()
+            ]
+          }]
+        };
+        o.cmd = JSON.stringify(o.cmd);
+        $.post("/sql", o);
+      },
+      closeEdit: function(ev, ui){
+        $("button", ui.form).button("disable");
+      },
+      build: goTo,
+      clickButton: function(ev, ui){
+        switch(ui.choice){
+          case "MEMBER":
+            GOTO_MEMBER_FILT = 'team_id="'+$("input[name=id]", $T).val()+'"';
+            $("#id_Menu")
+            .tree("open", $("input[data-menu='01.03_Competitor.htm']", "#id_Menu"));
+            break;
+          default:
+            console.log(ui.choice);
+            break;
+        }
+      },
+      autoOpt:   {
+        source: function(request, response){
+          var q = this.element[0].name,
+            Q =  {
+            "class": "SELECT id AS class_id,val,sex||' '||name AS label FROM class WHERE name LIKE('%' || ? || '%') GROUP BY name",
+          };
+          var o = {
+            base:
+              SQL_COMP_BASE + CompBase,
+            cmd:  [{
+              sgn:   "AUTO",
+              query: Q[q],
+              para: [request.term]
+            }]
+          };
+          o.cmd = JSON.stringify(o.cmd);
+          $.post("/sql", o, function(D){
+            // squad
+            if(D.AUTO.length)
+              response(D.AUTO);
+            else
+              response([]);
+          });
+        },
+        select: function(ev, ui){
+          var q = this.name;
+          switch(q){
+            case "class":
+              this.form.class_id.value = ui.item.class_id;
+          }
+        }
+      }
+    });
+    setTimeout(function(){
+      $T.focus();
+    }, 1000);
+  }
+  // -------------------------------------------------------------------
+  function goTo(){
+    change_all_lang($T);
+    if(GOTO_TEAM_FILT !== null){
+      setTimeout(function(){
+        $T.tables("option", {
+          filt: GOTO_TEAM_FILT,
+          filtSw: true
+        });
+        $T
+        .tables("refresh")
+        .focus();
+        GOTO_TEAM_FILT = null;
+      }, 100);
+    } else
+      setTimeout(function(){
+        $T.focus();
+      }, 500);
+  }
+  // -------------------------------------------------------------------
+});
+</script>
+<div id="id_Team" style="display:none" class="ui-corner-top">
+  <form id="id_Team_Form"  style="display:block" class="mk-tables-form">
+    <input type="submit" tabindex="-1" style="position:absolute; top:-1000px;display:none">
+    <table id="id_Team_Table" tabindex="2">
+      <tbody>
+        <tr>
+          <td class="ui-widget-header lang" style="width:1%">Team</td>
+          <td class="ui-widget-content" style="width:1%">
+            <input type="text" name="name" class="upd" style="width:30em">
+          </td>
+          <td class="ui-widget-header lang" style="width:1%">Valid</td>
+          <td class="ui-widget-content">
+            <input type="text" name="valid" class="upd" style="width:4em">
+          </td>
+          <td class="ui-widget-header" style="width:90%"></td>
+          <td class="ui-widget-content" style="width:1%">
+            <input name="id" style="width:4em;text-align:center;background:transparent" type="text" disabled>
+          </td>
+        </tr>
+        <tr>
+          <td class="ui-widget-header lang">Class</td>
+          <td class="ui-widget-content">
+            <input type="text" name="class" class="autocomplete">
+          </td>
+          <td class="ui-widget-header lang">Number</td>
+          <td class="ui-widget-content">
+            <input type="text" name="nr" class="upd" style="text-align:right">
+          </td>
+          <td class="ui-widget-header" colspan="2"></td>
+        </tr>
+        <tr>
+          <td class="ui-widget-header lang email">Email</td>
+          <td class="ui-widget-content">
+            <input type="text" name="email" class="upd">
+          </td>
+          <td class="ui-widget-header lang">Squad</td>
+          <td class="ui-widget-content">
+            <input type="text" name="squad" class="upd" style="text-align:right">
+          </td>
+          <td class="ui-widget-header" colspan="2"></td>
+        </tr>
+      </tbody>
+    </table>
+    <input type="hidden" name="class_id" class="upd">
+  </form>
+</div>

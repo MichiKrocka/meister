@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html style="width:100%;height:100%;overflow:hidden">
+<head>
+  <meta http-equiv="X-UA-Compatible" content="IE=EDGE">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1.0, user-scalable=yes">
+  <title class="lang">Champion</title>
+  <script async type="text/javascript" src="/lib/js/fallback.min.js"></script>
+<script type="text/javascript">
+var oFallback = {
+  // css
+  'css_ui': [
+//    'https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.min.css',
+    'themes/base/jquery-ui.min.css'
+  ],
+  'css_awesome': [
+//    'https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css',
+    //'https://use.fontawesome.com/568396c591.js',
+    '/lib/css/font-awesome.min.css'
+  ],
+  'css_tables': [
+//    'http://www.bayern-surf.de/krocka/cdn/lib/css/jquery.mk.tables.min.css',
+    '/lib/css/jquery.mk.tables.css'
+  ],
+  'css_winner': [
+//    'http://www.bayern-surf.de/krocka/cdn/meister/css/winner.min.css',
+    'css/winner.css'
+  ],
+  // js
+  'jQuery': [
+//    'https://code.jquery.com/jquery-3.1.1.min.js',
+    '/lib/js/jquery.min.js'
+  ],
+  'jQuery.ui': [
+//    'https://code.jquery.com/ui/1.12.1/jquery-ui.min.js',
+    '/lib/js/jquery-ui.min.js'
+  ],
+  'set_lang': [
+//    'http://www.bayern-surf.de/krocka/cdn/lib/js/locale.min.js',
+    '/lib/js/locale.js'
+  ],
+  'jQuery.printf': [
+//    'http://www.bayern-surf.de/krocka/cdn/lib/js/jquery.printf.min.js',
+    '/lib/js/jquery.printf.min.js'
+  ],
+  'date_time': [
+//    'http://www.bayern-surf.de/krocka/cdn/lib/js/date_time.min.js',
+    '/lib/js/date_time.js'
+  ],
+  'start': [
+//    'http://www.bayern-surf.de/krocka/cdn/meister/js/winner.js',
+    'js/winner.js'
+  ]
+};
+function load(){
+  window.route = "";
+/*
+  window.route = opener.route;
+  if(window.route == "#"){
+    for(var o in oFallback){
+      oFallback[o].reverse();
+    }
+  }
+*/
+  var E = document.getElementById("id_Cnt"),
+      i = 0,
+      T = setInterval(function(){
+        E.innerHTML = ++i;
+      }, 1000);
+  fallback.load(
+    oFallback,
+    {
+      shim: {
+        'jQuery.ui':                     ['jQuery'],
+        'jQuery.printf':                 ['jQuery.ui'],
+        'set_lang':                      ['jQuery'],
+        'date_time':                     ['jQuery','jQuery.printf'],
+        'start':                         ['jQuery.ui',
+                                        'oTempPrg','set_lang']
+      }
+    }
+  );
+  fallback.ready(function(){
+    clearInterval(T);
+    $("#id_CntTab").hide();
+    $("table.layout").show();
+    start();
+  });
+}
+</script>
+</head>
+<body onload="load()">
+  <table id="id_CntTab" style="width:100%;height:100%;font-size:5em">
+    <tr>
+      <td style="text-align:center;vertical-align:middle" id="id_Cnt">0</td>
+    </tr>
+  </table>
+  <table class="layout" style="display:none">
+    <thead style="height:1%" class="ui-widget-content" border="0">
+      <tr>
+        <td colspan="3" class="ui-widget-header" style="padding:4px 0 4px 10px">
+          <a href="mailto:michael.krocka@gmail.com" class="link" title="E-Mail: michael.krocka@gmail.com" style="text-decoration:none" tabindex="-1">
+            <span class="lang" style="font-size:1.5em;font-weight:normal">Champion</span>
+            <sub style="font-size:0.8em;font-weight:normal">
+            &copy; 2016 - Michael Krocka
+            </sub>
+          </a>
+          <span class="lang" style="margin-left:5em;font-size:1.7em">
+            <span class="lang">Archive</span>
+          </span>
+          <div style="float:right">
+            <button class="lang-title help" title="Help">
+              <i class="fa fa-question lang"></i> <span class="lang">Help</span>
+            </button>
+          </div>
+        </td>
+      </tr>
+    </thead>
+    <tfoot style="height:1%" class="ui-widget-header">
+      <tr>
+        <td colspan="2" style="white-space:nowrap;padding:2px">
+          <div id="id_Msg" class="ui-state-error-text" style="float:left;font-size:0.9em;font-weight:normal;padding-left:5px">
+          </div>
+          <div id="id_Time" style="float:right;margin:0 1em 0 1em;font-size:0.9em;font-weight:normal">00:00</div>
+        </td>
+      </tr>
+    </tfoot>
+    <tbody>
+      <tr>
+        <td rowspan="2" style="width:30%" class="ui-widget-content">
+          <div id="id_Comp"></div>
+        </td>
+        <td class="ui-widget-content" style="height:1%">
+          <div id="id_Info"></div>
+        </td>
+      </tr>
+      <tr>
+        <td class="ui-widget-content">
+          <div id="id_Class"></div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+</body>
+</html>

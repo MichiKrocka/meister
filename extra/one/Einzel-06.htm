@@ -1,0 +1,54 @@
+<style class="template css" type="text/css">
+<!--
+html {
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  width: 100%;
+}
+body {
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  margin-left: auto;
+  margin-right: auto;
+  padding:0;
+  border:0;
+  height:100%;
+  width: 210mm;
+  font-size:14px;
+}
+.html {
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  font-family: cursive;
+  border: 1px solid white;
+  page-break-after: always;
+  padding: 0;
+  width: 210mm;
+  height: 297mm;
+  margin-left: auto;
+  margin-right: auto;
+  background-image:url(img/urkunde_weilheim.png);
+  background-repeat:no-repeat;
+  background-position:center center;
+  background-size:210mm 297mm;
+}
+-->
+</style>
+<div class="template html">
+  <div data-replace="oComp.info" style="font-size:1.8cm;font-weight:bold;text-align:center;margin-left:7.5cm;margin-top:3cm">Bezeichnung</div>
+  <div data-replace="oC.name" style="font-size:10mm;text-align:center;margin-left:7.5cm;margin-top:1cm">Klasse</div>
+  <div data-replace="oA.surename+' '+oA.forename" style="font-size:1.2cm;font-weight:bold;text-align:center;margin-left:7.5cm;margin-top:1cm">Turner</div>
+  <div data-replace="oA.club" style="font-size:7mm;text-align:center;margin-left:7.5cm;margin-top:0cm">Verein</div>
+  <div style="font-size:7mm;text-align:center;margin-left:7.5cm;margin-top:1cm">
+    <span data-replace="Sum" class="c_float">Summe</span>
+    <span>Pkt.</span>
+  </div>
+  <div style="font-size:7mm;text-align:center;margin-left:7.5cm;margin-top:1cm" class="c_not">
+    <span data-replace="Rang" style="font-size:1.1cm;font-weight:bold;">#</span>
+    Platz
+  </div>
+  <div data-replace="oComp.datum" style="font-size:4mm;text-align:center;margin-left:7.5cm;margin-top:1.5cm">Datum</div>
+</div>
