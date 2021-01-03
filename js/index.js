@@ -10,8 +10,7 @@ var DIR_MENU      = "menu",            // directory with menus
     DIR_THEMES    = "themes",          // directory with themes
     COOKIE_THEMES = "jquery-ui-theme", // cookies id
 
-    SQL_BASE_DIR  = "database/meister_sql/",
-//    SQL_BASE_DIR  = "meister_sql/",
+    SQL_BASE_DIR  = "data/meister_sql/",
     SQL_SYS_BASE  = SQL_BASE_DIR + "m4_sys.sqlite",
     SQL_COMP_BASE = SQL_BASE_DIR + "competition/",
 

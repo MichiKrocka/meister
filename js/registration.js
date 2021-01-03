@@ -7,7 +7,7 @@ var AccessDir = window.location.pathname.substr(
     DIR_LANG      = "locale",     // directory with languages
     DIR_THEMES    = "themes",     // directory with themes
 
-    SQL_BASE_DIR  = "database/meister_sql/",
+    SQL_BASE_DIR  = "data/meister_sql/",
     SQL_SYS_BASE  = SQL_BASE_DIR + "m4_sys.sqlite",
     SQL_COMP_BASE = SQL_BASE_DIR + "competition/",
 
